@@ -1,4 +1,5 @@
 setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
 load("data_Saved_R_Objects/corr_matrices/normal_tumor_encRNA_triplets.rda")
 load("mircode_objects.rda") 
 load("starbase_mRNA_miRNA_interactions.rda") 
@@ -20,9 +21,12 @@ length(unique(normal_encRNA$lncRNA)) # [1] 200
 # then compare that matrix with the triplets in the sensitivity matrix
 
 normal_encRNA_sensitivity_matched = get_matched_enRNA_sensitivity_with_putative_binding(normal_encRNA)
-dim(normal_encRNA_sensitivity_matched)
+dim(normal_encRNA_sensitivity_matched) # 188 12
+length(which(normal_encRNA_sensitivity_matched$lncRNA_miRNA_corr < 0 & normal_encRNA_sensitivity_matched$mRNA_miRNA_corr < 0))  # 3
+
 tumor_encRNA_sensitivity_matched = get_matched_enRNA_sensitivity_with_putative_binding(tumor_encRNA)
-dim(tumor_encRNA_sensitivity_matched)
+dim(tumor_encRNA_sensitivity_matched) # 48 12
+length(which(tumor_encRNA_sensitivity_matched$lncRNA_miRNA_corr < 0 & tumor_encRNA_sensitivity_matched$mRNA_miRNA_corr < 0))  # 1
 
 intersect(normal_encRNA_sensitivity_matched$mRNA, tumor_encRNA_sensitivity_matched$mRNA) # 0
 intersect(normal_encRNA_sensitivity_matched$miRNA, tumor_encRNA_sensitivity_matched$miRNA) # [1] "hsa-mir-22"

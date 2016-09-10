@@ -1,12 +1,16 @@
 setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
-require(ppcor)
-load("Saved_R_Objects/brca_df.rda")
+source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
+
+load("data_Saved_R_Objects/brca_df.rda")
 # load("Saved_R_Objects/corr_matrices/corr_matrices.rda")
 # load("Saved_R_Objects/corr_matrices/normal_tumor_corr_matrices.rda")
-load("Saved_R_Objects/corr_matrices/all_corr_matrices_with_names.rda")
-load("Saved_R_Objects/corr_matrices/tumor_normal_lncRNA_mRNA_pair9999.rda")
-load("Saved_R_Objects/corr_matrices/sensitivity_matricies_9999.rda")
+load("data_Saved_R_Objects/corr_matrices/all_corr_matrices_with_names.rda")
+load("data_Saved_R_Objects/corr_matrices/tumor_normal_lncRNA_mRNA_pair9999.rda")
+load("data_Saved_R_Objects/corr_matrices/sensitivity_matricies_9999.rda")
 # load("Saved_R_Objects/corr_matrices/sensitivity_matrix.rda")
+
+require(ppcor); require(rlist);
+require(foreach); require(doParallel);
 
 # -------------------- Dimension check --------------------------------------------------
 dim(lncRNA_mRNA_corr_matrix) # [1]  4828 17613
