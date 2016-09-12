@@ -332,13 +332,14 @@ get_encRNA = function(matrix, miRNA_mRNA_corr, miRNA_lncRNA_corr, threshold){
   pos = regexpr("-",as.character(dataframe$encRNA_pair))
   dataframe$lncRNA = substr(as.character(dataframe$encRNA_pair), start = 1, stop = pos - 1)
   dataframe$mRNA = substr(as.character(dataframe$encRNA_pair), start = pos + 1, stop = nchar(as.character(dataframe$encRNA_pair))) 
-  dataframe$lncRNA_miRNA_corr = diag(miRNA_lncRNA_corr[as.character(dataframe$miRNA),as.character(dataframe$lncRNA)])
-  dataframe$mRNA_miRNA_corr = diag(miRNA_mRNA_corr[as.character(dataframe$miRNA),as.character(dataframe$mRNA)])
   
-  # for (i in 1:nrow(dataframe)){
-  #   dataframe$lncRNA_miRNA_corr[i] = miRNA_lncRNA_corr[as.character(dataframe$miRNA),as.character(dataframe$lncRNA)]
-  #   dataframe$mRNA_miRNA_corr[i] = miRNA_mRNA_corr[as.character(dataframe$miRNA),as.character(dataframe$mRNA)]
-  # }
+  dataframe$lncRNA_miRNA_corr = rep(NA, nrow(dataframe))
+  dataframe$mRNA_miRNA_corr = rep(NA, nrow(dataframe))
+  
+  for (i in 1:nrow(dataframe)){
+    dataframe$lncRNA_miRNA_corr[i] = miRNA_lncRNA_corr[as.character(dataframe$miRNA[i]),as.character(dataframe$lncRNA[i])]
+    dataframe$mRNA_miRNA_corr[i] = miRNA_mRNA_corr[as.character(dataframe$miRNA[i]),as.character(dataframe$mRNA[i])]
+  }
   
   dataframe$encRNA_triple = paste(dataframe$encRNA_pair, miRNA, sep = "-")
   dataframe$lncRNA_miRNA_pair = paste(dataframe$lncRNA, miRNA, sep = "-")
