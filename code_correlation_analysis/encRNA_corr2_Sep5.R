@@ -5,9 +5,11 @@ load("data_Saved_R_Objects/brca_df.rda")
 # load("Saved_R_Objects/corr_matrices/corr_matrices.rda")
 # load("Saved_R_Objects/corr_matrices/normal_tumor_corr_matrices.rda")
 load("data_Saved_R_Objects/corr_matrices/all_corr_matrices_with_names.rda")
-load("data_Saved_R_Objects/corr_matrices/tumor_normal_lncRNA_mRNA_pair9999.rda")
-load("data_Saved_R_Objects/corr_matrices/sensitivity_matricies_9999.rda")
+# load("data_Saved_R_Objects/corr_matrices/tumor_normal_lncRNA_mRNA_pair9999.rda")
+# load("data_Saved_R_Objects/corr_matrices/sensitivity_matricies_9999.rda")
 # load("Saved_R_Objects/corr_matrices/sensitivity_matrix.rda")
+load("data_Saved_R_Objects/corr_matrices/normal_encRNA_850356.rda")
+load("data_Saved_R_Objects/corr_matrices/normal_sensitivity850356.rda")
 
 require(ppcor); require(rlist);
 require(foreach); require(doParallel);
@@ -27,45 +29,27 @@ legend(x = 'topright', pch = 15,
        legend = c("normal", "tumor"))
 # ------------------- Get lncRNA mRNA pair ----------------------------------------------
 
-# # get 99% quantile from normal and cancer correlation matrices
-# normal_quantile99 = quantile(normal_lncRNA_mRNA_corr_matrix, c(0.99))
-# # 99% 
-# # 0.710914 
-# tumor_quantile99 = quantile(tumor_lncRNA_mRNA_corr_matrix, c(0.99))
-# # 99% 
-# # 0.3476711 
-# 
-# # select top pairs lncRNA-mRNA from normal dataset
-# normal_lncRNA_mRNA_pairs99 = get_lncRNA_mRNA_pairs(normal_lncRNA_mRNA_corr_matrix, 
-#                                                  normal_quantile99)
-# dim(normal_lncRNA_mRNA_pairs99)
-# # [1] 850356      5 --> too many
-# 
-# tumor_lncRNA_mRNA_pairs99 = get_lncRNA_mRNA_pairs(tumor_lncRNA_mRNA_corr_matrix, 
-#                                                   tumor_quantile99)
-# dim(tumor_lncRNA_mRNA_pairs99)
-# # [1] 850356      5 --> similarly too many, thus apply a more stringent 
+#select top pairs lncRNA-mRNA from normal dataset
+quantile(normal_lncRNA_mRNA_corr_matrix, c(0.99)) # 0.710914
+gc()
+normal_lncRNA_mRNA_pairs = get_lncRNA_mRNA_pairs(normal_lncRNA_mRNA_corr_matrix,
+                                                     quantile(normal_lncRNA_mRNA_corr_matrix, c(0.99)))
 
-# thus, make the threshold for normal sample more stringent --> 99.99%
-normal_quantile9999 = quantile(normal_lncRNA_mRNA_corr_matrix, c(0.9999))
-# 99.99% 
-# 0.8866987 
-# select top pairs lncRNA-mRNA from normal dataset
-normal_lncRNA_mRNA_pairs9999 = get_lncRNA_mRNA_pairs(normal_lncRNA_mRNA_corr_matrix, 
-                                                 normal_quantile9999)
-dim(normal_lncRNA_mRNA_pairs9999)
-# [1] 8504    5
+# select top pairs lncRNA-mRNA from tumor dataset
+quantile(tumor_lncRNA_mRNA_corr_matrix, c(0.99)) # 0.3476711; 
+gc()
+tumor_lncRNA_mRNA_pairs = get_lncRNA_mRNA_pairs(tumor_lncRNA_mRNA_corr_matrix,
+                                                quantile(tumor_lncRNA_mRNA_corr_matrix, c(0.99)))
+dim(tumor_lncRNA_mRNA_pairs)
 
-tumor_quantile9999 = quantile(tumor_lncRNA_mRNA_corr_matrix, c(0.9999))
-# 99.99% 
-# 0.694144 
-tumor_lncRNA_mRNA_pairs9999 = get_lncRNA_mRNA_pairs(tumor_lncRNA_mRNA_corr_matrix, 
-                                                  tumor_quantile9999)
-dim(tumor_lncRNA_mRNA_pairs9999) 
-# [1] 8504  5
+# -------- check overlap between normal and tumor lncRNA - mRNA pair ---------------------
+require(compare)
+normal_lncRNA_mRNA_pairs_vector = paste(normal_lncRNA_mRNA_pairs$mRNA, normal_lncRNA_mRNA_pairs$lncRNA, 
+                                        sep = "-")
+tumor_lncRNA_mRNA_pairs_vector = paste(tumor_lncRNA_mRNA_pairs$mRNA, tumor_lncRNA_mRNA_pairs$lncRNA, 
+                                        sep = "-")
+length(intersect(normal_lncRNA_mRNA_pairs_vector,tumor_lncRNA_mRNA_pairs_vector)) # 92725
 
-save(tumor_lncRNA_mRNA_pairs9999, normal_lncRNA_mRNA_pairs9999, 
-     file = "Saved_R_Objects/corr_matrices/tumor_normal_lncRNA_mRNA_pair9999.rda")
 
 # --------------- build sensitivity matrix from normal cells------------------------------
 
