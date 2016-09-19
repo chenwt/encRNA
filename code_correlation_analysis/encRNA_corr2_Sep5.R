@@ -1,3 +1,4 @@
+
 setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
 
@@ -10,7 +11,7 @@ load("data_Saved_R_Objects/corr_matrices/all_corr_matrices_with_names.rda")
 # load("Saved_R_Objects/corr_matrices/sensitivity_matrix.rda")
 load("data_Saved_R_Objects/corr_matrices/normal_encRNA_850356.rda")
 load("data_Saved_R_Objects/corr_matrices/tumor_encRNA_850356.rda")
-load("data_Saved_R_Objects/corr_matrices/normal_sensitivity850356.rda")
+load("data_Saved_R_Objects/corr_matrices/normal_sensitivity_full.rda")
 load("data_Saved_R_Objects/corr_matrices/tumor_sensivitivity_full.rda")
 load("data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
 require(ppcor); require(rlist);
@@ -22,6 +23,8 @@ dim(miRNA_lncRNA_corr_matrix) #[1]  343 4828
 dim(miRNA_mRNA_corr_matrix) #[1]   343 17613
 
 # ------------------- Visualization ----------------------------------------------------
+
+# plot density of all correaltion between lncRNA and mRNA
 plot(density(tumor_lncRNA_mRNA_corr_matrix), 
      col = "red", lwd = 3, ylim = c(0,4), 
      main = "mRNA - lncRNA correlation (normal and tumor)")
@@ -29,6 +32,9 @@ lines(density(normal_lncRNA_mRNA_corr_matrix), col = "green", lwd = 3)
 legend(x = 'topright', pch = 15,
        col = c("green","red"),
        legend = c("normal", "tumor"))
+
+# plot density of all 
+
 # ------------------- Get lncRNA mRNA pair ----------------------------------------------
 # DO NOT NEED TO RUN THIS CHUNK AGAIN
 #select top pairs lncRNA-mRNA from normal dataset
@@ -68,7 +74,7 @@ length(intersect(normal_lncRNA_mRNA_pairs_vector,tumor_lncRNA_mRNA_pairs_vector)
 
 # --------------- build sensitivity matrix from normal cells------------------------------
 
-# # get only subset expression data from normal cells
+# get only subset expression data from normal cells
 # normal_indices = 1:79
 # mRNA_normal = brca_mRNA_df[,normal_indices];
 # miRNA_normal = brca_miRNA_df[,normal_indices];
@@ -163,6 +169,7 @@ length(intersect(normal_lncRNA_mRNA_pairs_vector,tumor_lncRNA_mRNA_pairs_vector)
 dim(normal_sensitivity_full) # 850356    343  --> 291,672,108 total triplets (lncRNA - mRNA - miRNA)
 ptm = proc.time()
 normal_encRNA = get_encRNA(matrix = normal_sensitivity_full,
+                           lncRNA_mRNA_corr = normal_lncRNA_mRNA_corr_matrix,
                            miRNA_mRNA_corr = normal_miRNA_mRNA_corr_matrix,
                            miRNA_lncRNA_corr = normal_miRNA_lncRNA_corr_matrix,
                            threshold = 0.2454465) # corresponding to 99 percentile 
@@ -183,16 +190,16 @@ dim(tumor_sensitivity_full) # 850356    343 --> good
 tumor_99quantile = quantile(as.vector(tumor_sensitivity_full),c(0.99)); gc() # 0.08703023 --> quite low
 ptm = proc.time()
 tumor_encRNA = get_encRNA(matrix = tumor_sensitivity_full,
-                           miRNA_mRNA_corr = tumor_miRNA_mRNA_corr_matrix,
-                           miRNA_lncRNA_corr = tumor_miRNA_lncRNA_corr_matrix,
-                           threshold = tumor_99quantile) # corresponding to 99 percentile
-#save(tumor_encRNA, file = "data_Saved_R_Objects/corr_matrices/tumor_encRNA_850356.rda")
-tumor_encRNA = get_encRNA(matrix = tumor_sensitivity_full,
+                          lncRNA_mRNA_corr = tumor_lncRNA_mRNA_corr_matrix,
                           miRNA_mRNA_corr = tumor_miRNA_mRNA_corr_matrix,
                           miRNA_lncRNA_corr = tumor_miRNA_lncRNA_corr_matrix,
-                          threshold = 0.2454465) # corresponding to 99 percentile
+                          threshold = tumor_99quantile) # corresponding to 99 percentile
 gc()
 ptm = proc.time() - ptm; ptm #  770.898 ~ 12.84 mins
+
+save(tumor_encRNA, file = "data_Saved_R_Objects/corr_matrices/tumor_encRNA_850356.rda")
+
+
 length(unique(tumor_encRNA$mRNA)) 
 length(unique(tumor_encRNA$lncRNA)) 
 length(unique(tumor_encRNA$miRNA)) 
@@ -208,6 +215,21 @@ length(intersect(unique(normal_encRNA$encRNA_pair), unique(tumor_encRNA$encRNA_p
 length(intersect(unique(normal_encRNA$mRNA_miRNA_pair), unique(tumor_encRNA$mRNA_miRNA_pair)))
 length(intersect(unique(normal_encRNA$lncRNA_miRNA_pair), unique(tumor_encRNA$lncRNA_miRNA_pair)))
 length(intersect(unique(normal_encRNA$encRNA_triple), unique(tumor_encRNA$encRNA_triple)))
+
+#### analysis: visualize the distribution of mRNA-miRNA's and lncRNA-miRNA's correlation in encRNA
+# aim: can be used to filter encRNA
+
+plot(density(normal_encRNA$lncRNA_miRNA_corr), 
+     main = "encRNAs of top 99 percentile sensitivity correlation",
+     ylim = c(0,7),
+     col = "orange", lwd = 3)
+lines(density(normal_encRNA$mRNA_miRNA_corr), 
+      col = "blue", lwd = 3)
+legend(x = 'topright', pch = 15,
+       col = c("orange","blue"),
+       legend = c("lncRNA-miRNA correlation", "mRNA-miRNA correlation"))
+summary(normal_encRNA$mRNA_miRNA_corr)
+summary(normal_encRNA$lncRNA_miRNA_corr)
 
 
 #### question: out of those 2,916,723 triplets, how many included in the putative binding information? 
@@ -235,6 +257,7 @@ length(unique(tumor_encRNA_sensitivity_bound$lncRNA)) # 31
 length(which(normal_encRNA$lncRNA_miRNA_corr < 0 & normal_encRNA$mRNA_miRNA_corr < 0)) # 347,072
 indices = which(normal_encRNA$lncRNA_miRNA_corr < 0 & normal_encRNA$mRNA_miRNA_corr < 0, arr.ind = TRUE)
 normal_encRNA_goodCorr = normal_encRNA[indices,]; nrow(normal_encRNA_goodCorr) # 347,072
+
 # tumor samples
 length(which(tumor_encRNA$lncRNA_miRNA_corr < 0 & tumor_encRNA$mRNA_miRNA_corr < 0)) 
 indices = which(tumor_encRNA$lncRNA_miRNA_corr < 0 & tumor_encRNA$mRNA_miRNA_corr < 0, arr.ind = TRUE)
@@ -271,15 +294,6 @@ length(unique(tumor_encRNA_sensitivity_goodCorr_bound$lncRNA))
 # mRNA-lncRNA pairs (in the beginning of the analysis)?
 overlapped_mRNA_lncRNA_two_conditions = intersect(normal_lncRNA_mRNA_pairs_vector,tumor_lncRNA_mRNA_pairs_vector)
 length(intersect(normal_encRNA_sensitivity_goodCorr_bound$encRNA_pair,overlapped_mRNA_lncRNA_two_conditions)) # 58 
-
-
-
-
-
-
-
-
-
 
 # -------------- building mRNA-mRNA and lncRNA-lncRNA pairs ---------------------------------------------
 load("data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
