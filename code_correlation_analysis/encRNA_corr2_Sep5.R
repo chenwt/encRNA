@@ -1,4 +1,3 @@
-
 setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
 
@@ -16,11 +15,15 @@ load("data_Saved_R_Objects/corr_matrices/tumor_sensivitivity_full.rda")
 load("data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
 require(ppcor); require(rlist);
 require(foreach); require(doParallel);
+require(ggplot2)
 
 # -------------------- Dimension check --------------------------------------------------
 dim(lncRNA_mRNA_corr_matrix) # [1]  4828 17613
 dim(miRNA_lncRNA_corr_matrix) #[1]  343 4828
 dim(miRNA_mRNA_corr_matrix) #[1]   343 17613
+
+dim(normal_sensitivity_full) # 850356    343
+
 
 # ------------------- Visualization ----------------------------------------------------
 
@@ -33,7 +36,7 @@ legend(x = 'topright', pch = 15,
        col = c("green","red"),
        legend = c("normal", "tumor"))
 
-# plot density of all 
+
 
 # ------------------- Get lncRNA mRNA pair ----------------------------------------------
 # DO NOT NEED TO RUN THIS CHUNK AGAIN
@@ -51,14 +54,17 @@ tumor_lncRNA_mRNA_pairs = get_lncRNA_mRNA_pairs(tumor_lncRNA_mRNA_corr_matrix,
 dim(tumor_lncRNA_mRNA_pairs)
 save(normal_lncRNA_mRNA_pairs, tumor_lncRNA_mRNA_pairs, file = "data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
 
+# density of top 1% mRNA - lncRNA correlation
 plot(density(tumor_lncRNA_mRNA_pairs$corr), 
      col = "red", lwd = 3, ylim = c(0,16), 
-     main = "Top 99 percentile mRNA - lncRNA correlation (normal and tumor)")
+     xlab = "Correlations from top 850,356 lncRNA-mRNA pairs",
+     main = "Top 1% mRNA - lncRNA correlation (normal and tumor)")
 lines(density(normal_lncRNA_mRNA_pairs$corr), col = "green", lwd = 3)
 
 legend(x = 'topright', pch = 15,
        col = c("green","red"),
        legend = c("normal (cut-off = 0.71)", "tumor (cut-off = 0.35)"))
+
 
 # -------- check overlap between normal and tumor lncRNA - mRNA pair ---------------------
 
@@ -167,12 +173,13 @@ length(intersect(normal_lncRNA_mRNA_pairs_vector,tumor_lncRNA_mRNA_pairs_vector)
 # now, get the summary matrix from the sensitivity matrix, with threshold 0.99 for sensitivity matrix
 # DO NOT RUN THIS CHUNK AGAIN
 dim(normal_sensitivity_full) # 850356    343  --> 291,672,108 total triplets (lncRNA - mRNA - miRNA)
+normal_99quantile = quantile(as.vector(normal_sensitivity_full),c(0.99)); gc() # 0.2454465
 ptm = proc.time()
 normal_encRNA = get_encRNA(matrix = normal_sensitivity_full,
                            lncRNA_mRNA_corr = normal_lncRNA_mRNA_corr_matrix,
                            miRNA_mRNA_corr = normal_miRNA_mRNA_corr_matrix,
                            miRNA_lncRNA_corr = normal_miRNA_lncRNA_corr_matrix,
-                           threshold = 0.2454465) # corresponding to 99 percentile 
+                           threshold = normal_99quantile) 
 ptm = proc.time() - ptm; ptm #  1103.398 seconds ~ 18 mins
 
 # save(normal_encRNA, file = "data_Saved_R_Objects/corr_matrices/normal_encRNA_850356.rda")
@@ -207,6 +214,7 @@ length(unique(tumor_encRNA$encRNA_pair))
 length(unique(tumor_encRNA$mRNA_miRNA_pair)) 
 length(unique(tumor_encRNA$lncRNA_miRNA_pair)) 
 
+
 #### question: test the overlap between encRNA of tumor and normal 
 length(intersect(unique(normal_encRNA$mRNA), unique(tumor_encRNA$mRNA)))
 length(intersect(unique(normal_encRNA$lncRNA), unique(tumor_encRNA$lncRNA)))
@@ -216,23 +224,118 @@ length(intersect(unique(normal_encRNA$mRNA_miRNA_pair), unique(tumor_encRNA$mRNA
 length(intersect(unique(normal_encRNA$lncRNA_miRNA_pair), unique(tumor_encRNA$lncRNA_miRNA_pair)))
 length(intersect(unique(normal_encRNA$encRNA_triple), unique(tumor_encRNA$encRNA_triple)))
 
-#### analysis: visualize the distribution of mRNA-miRNA's and lncRNA-miRNA's correlation in encRNA
+## -------- Visualizeation the distribution of mRNA-miRNA's and lncRNA-miRNA's correlation in encRNA -----------
 # aim: can be used to filter encRNA
 
+# plot the sensitivity matrix
+# plot density of all sensitivity values (291,672,108 data points)
+plot(density(as.vector(normal_sensitivity_full)), 
+     col = "green", lwd = 3, ylim = c(0,160), 
+     main = "Sensitivity correlations from 850,356 encRNA pairs vs 343 miRNAs")
+lines(density(as.vector(tumor_sensitivity_full)), col = "red", lwd = 3)
+legend(x = 'topright', pch = 15,
+       col = c("green","red"),
+       legend = c("normal", "tumor"))
+
+# for the top 1% sensitivity cut-off, plot all the remaining sensitivity
+plot(density(normal_encRNA$sensitivity), 
+     main = "Sensivity correlation of top 1% of 850,356 encRNA pairs vs 343 miRNAs",
+     xlab = "Sensivity correlation of 2,916,723 encRNAs-miRNA pairs",
+     xlim = c(0,1),
+     ylim = c(0,31),
+     col = "green", lwd = 3)
+lines(density(tumor_encRNA$sensitivity), 
+      col = "red", lwd = 3)
+legend(x = 'topright', pch = 15,
+       col = c("red","green"),
+       legend = c("tumor", "normal"))
+
+
+# plot lncRNA-miRNA and mRNA-miRNA correlation correlation of normal_encRNA and tumor_encRNA
+par(mfrow = c(2,1))
 plot(density(normal_encRNA$lncRNA_miRNA_corr), 
-     main = "encRNAs of top 99 percentile sensitivity correlation",
+     main = "Normal samples - encRNA pairs correlation (S-based top 1% encRNA triplets)",
+     xlab = "Correlation of 2,916,723 RNA-miRNA pairs",
      ylim = c(0,7),
      col = "orange", lwd = 3)
 lines(density(normal_encRNA$mRNA_miRNA_corr), 
       col = "blue", lwd = 3)
-legend(x = 'topright', pch = 15,
+legend(x = 'topleft', pch = 15,
        col = c("orange","blue"),
        legend = c("lncRNA-miRNA correlation", "mRNA-miRNA correlation"))
+
+plot(density(tumor_encRNA$lncRNA_miRNA_corr), 
+     main = "Tumor samples - encRNA pairs correlation (S-based top 1% encRNA triplets)",
+     xlab = "Correlation of 2,916,723 RNA-miRNA pairs",
+     ylim = c(0,7),
+     col = "orange", lwd = 3)
+lines(density(tumor_encRNA$mRNA_miRNA_corr), 
+      col = "blue", lwd = 3)
+legend(x = 'topleft', pch = 15,
+       col = c("orange","blue"),
+       legend = c("lncRNA-miRNA correlation", "mRNA-miRNA correlation"))
+
+plot(density(tumor_encRNA$sensitivity), 
+     col = "red", lwd = 3, ylim = c(0,16), 
+     main = "Top 99 percentile mRNA - lncRNA correlation (normal and tumor)")
+lines(density(normal_lncRNA_mRNA_pairs$corr), col = "green", lwd = 3)
+
+
+# plot mRNA-lncRNA correlation correlation of normal_encRNA and tumor_encRNA
+plot(density(normal_encRNA$lncRNA_mRNA_corr), 
+     main = "mRNA-lncRNA correlation (S-based top 1% encRNA triplets)",
+     xlab = "mRNA-lncRNA correlation of 2,916,723 encRNAs-miRNA pairs",
+     xlim = c(0,1),
+     ylim = c(0,31),
+     col = "green", lwd = 3)
+lines(density(tumor_encRNA$lncRNA_mRNA_corr), 
+      col = "red", lwd = 3)
+legend(x = 'topright', pch = 15,
+       col = c("red","green"),
+       legend = c("tumor", "normal"))
+
+
 summary(normal_encRNA$mRNA_miRNA_corr)
 summary(normal_encRNA$lncRNA_miRNA_corr)
 
+#### question: how many triplets in normal_encRNA satistifying encRNA hypothesis?
+#### answer: 347,072 for normal samples; 844,475 for tumor samples
 
-#### question: out of those 2,916,723 triplets, how many included in the putative binding information? 
+# normal samples
+length(which(normal_encRNA$lncRNA_miRNA_corr < 0 & normal_encRNA$mRNA_miRNA_corr < 0)) # 347,072
+indices = which(normal_encRNA$lncRNA_miRNA_corr < 0 & normal_encRNA$mRNA_miRNA_corr < 0, arr.ind = TRUE)
+normal_encRNA_goodCorr = normal_encRNA[indices,]; nrow(normal_encRNA_goodCorr) # 347,072
+
+length(which(normal_encRNA$lncRNA_miRNA_corr < -0.5 & normal_encRNA$mRNA_miRNA_corr < -0.5)) # 347,072
+
+
+length(unique(normal_encRNA_goodCorr$mRNA)) 
+length(unique(normal_encRNA_goodCorr$miRNA)) 
+length(unique(normal_encRNA_goodCorr$lncRNA)) 
+length(unique(normal_encRNA_goodCorr$encRNA_pair))
+
+# tumor samples
+length(which(tumor_encRNA$lncRNA_miRNA_corr < 0 & tumor_encRNA$mRNA_miRNA_corr < 0)) 
+indices = which(tumor_encRNA$lncRNA_miRNA_corr < 0 & tumor_encRNA$mRNA_miRNA_corr < 0, arr.ind = TRUE)
+tumor_encRNA_goodCorr = tumor_encRNA[indices,]; nrow(tumor_encRNA_goodCorr) 
+
+length(which(tumor_encRNA$lncRNA_miRNA_corr < -0.5 & tumor_encRNA$mRNA_miRNA_corr < -0.5)) 
+
+
+length(unique(tumor_encRNA_goodCorr$mRNA)) 
+length(unique(tumor_encRNA_goodCorr$miRNA)) 
+length(unique(tumor_encRNA_goodCorr$lncRNA)) 
+length(unique(tumor_encRNA_goodCorr$encRNA_pair))
+
+# check overlap
+length(intersect(unique(normal_encRNA_goodCorr$encRNA_triple), unique(tumor_encRNA_goodCorr$encRNA_triple)))
+length(intersect(unique(normal_encRNA_goodCorr$mRNA), unique(tumor_encRNA_goodCorr$mRNA)))
+length(intersect(unique(normal_encRNA_goodCorr$miRNA), unique(tumor_encRNA_goodCorr$miRNA)))
+length(intersect(unique(normal_encRNA_goodCorr$lncRNA), unique(tumor_encRNA_goodCorr$lncRNA)))
+length(intersect(unique(normal_encRNA_goodCorr$encRNA_pair), unique(tumor_encRNA_goodCorr$encRNA_pair)))
+
+
+#### question: out of all triplets, how many included in the putative binding information? 
 #### ans: 21,553 for normal samples; 11,516 for tumor
 # normal samples
 ptm = proc.time()
@@ -242,45 +345,82 @@ dim(normal_encRNA_sensitivity_bound) # 21,553   12
 length(unique(normal_encRNA_sensitivity_bound$mRNA)) # 3563
 length(unique(normal_encRNA_sensitivity_bound$miRNA)) # 17
 length(unique(normal_encRNA_sensitivity_bound$lncRNA)) # 142
-# tumor samples
+length(unique(normal_encRNA_sensitivity_bound$encRNA_pair))
+#tumor samples
 ptm = proc.time()
 tumor_encRNA_sensitivity_bound = get_matched_enRNA_sensitivity_with_putative_binding(tumor_encRNA)
 ptm = proc.time() - ptm; ptm # 18 seconds
-dim(tumor_encRNA_sensitivity_bound)
-length(unique(tumor_encRNA_sensitivity_bound$mRNA)) # 86
-length(unique(tumor_encRNA_sensitivity_bound$miRNA))# 8
-length(unique(tumor_encRNA_sensitivity_bound$lncRNA)) # 31
+dim(tumor_encRNA_sensitivity_bound) # [1] 11516    13
+length(unique(tumor_encRNA_sensitivity_bound$mRNA)) # 3220
+length(unique(tumor_encRNA_sensitivity_bound$miRNA))# 51
+length(unique(tumor_encRNA_sensitivity_bound$lncRNA)) # 312
+length(unique(tumor_encRNA_sensitivity_bound$encRNA_pair))
 
-#### question: how many triplets in normal_encRNA satistifying encRNA hypothesis? 347,072
-#### answer: 347,072 for normal samples; 844,475 for tumor samples
+# check overlap
+length(intersect(unique(normal_encRNA_sensitivity_bound$encRNA_triple), unique(tumor_encRNA_sensitivity_bound$encRNA_triple)))
+length(intersect(unique(normal_encRNA_sensitivity_bound$mRNA), unique(tumor_encRNA_sensitivity_bound$mRNA)))
+length(intersect(unique(normal_encRNA_sensitivity_bound$miRNA), unique(tumor_encRNA_sensitivity_bound$miRNA)))
+length(intersect(unique(normal_encRNA_sensitivity_bound$lncRNA), unique(tumor_encRNA_sensitivity_bound$lncRNA)))
+length(intersect(unique(normal_encRNA_sensitivity_bound$encRNA_pair), unique(tumor_encRNA_sensitivity_bound$encRNA_pair)))
+
+
+#### follow-up question: out of those encRNA whose interactions included in the database, how many satisfying the encRNA hypothesis?
 # normal samples
-length(which(normal_encRNA$lncRNA_miRNA_corr < 0 & normal_encRNA$mRNA_miRNA_corr < 0)) # 347,072
-indices = which(normal_encRNA$lncRNA_miRNA_corr < 0 & normal_encRNA$mRNA_miRNA_corr < 0, arr.ind = TRUE)
-normal_encRNA_goodCorr = normal_encRNA[indices,]; nrow(normal_encRNA_goodCorr) # 347,072
-
+indices = which(normal_encRNA_sensitivity_bound$lncRNA_miRNA_corr < 0 & normal_encRNA_sensitivity_bound$mRNA_miRNA_corr < 0, arr.ind = TRUE)
+normal_encRNA_sensitivity_bound_goodCoor = normal_encRNA_sensitivity_bound[indices,]; nrow(normal_encRNA_sensitivity_bound_goodCoor) 
+nrow(normal_encRNA_sensitivity_bound_goodCoor)
+length(unique(normal_encRNA_sensitivity_bound_goodCoor$mRNA)) 
+length(unique(normal_encRNA_sensitivity_bound_goodCoor$miRNA)) 
+length(unique(normal_encRNA_sensitivity_bound_goodCoor$lncRNA)) 
+length(unique(normal_encRNA_sensitivity_bound_goodCoor$encRNA_pair))
 # tumor samples
-length(which(tumor_encRNA$lncRNA_miRNA_corr < 0 & tumor_encRNA$mRNA_miRNA_corr < 0)) 
-indices = which(tumor_encRNA$lncRNA_miRNA_corr < 0 & tumor_encRNA$mRNA_miRNA_corr < 0, arr.ind = TRUE)
-tumor_encRNA_goodCorr = tumor_encRNA[indices,]; nrow(tumor_encRNA_goodCorr) 
+indices = which(tumor_encRNA_sensitivity_bound$lncRNA_miRNA_corr < 0 & tumor_encRNA_sensitivity_bound$mRNA_miRNA_corr < 0, arr.ind = TRUE)
+tumor_encRNA_sensitivity_bound_goodCoor = tumor_encRNA_sensitivity_bound[indices,]; nrow(tumor_encRNA_sensitivity_bound_goodCoor) 
+nrow(tumor_encRNA_sensitivity_bound_goodCoor)
+length(unique(tumor_encRNA_sensitivity_bound_goodCoor$mRNA)) 
+length(unique(tumor_encRNA_sensitivity_bound_goodCoor$miRNA)) 
+length(unique(tumor_encRNA_sensitivity_bound_goodCoor$lncRNA)) 
+length(unique(tumor_encRNA_sensitivity_bound_goodCoor$encRNA_pair))
 
-#### follow-up question: out of those 347,072 encRNA triplets satisfying encRNA hypothesis, how many included in putattive bindining information?
-#### answer: 1955 triplets for normal pairs, 
-# normal pairs
-ptm = proc.time()
-normal_encRNA_sensitivity_goodCorr_bound = get_matched_enRNA_sensitivity_with_putative_binding(normal_encRNA_goodCorr)
-ptm = proc.time() - ptm; ptm # 11 seconds 
-dim(normal_encRNA_sensitivity_goodCorr_bound) # 1955   12 --> 1955 triplets included in miRcode and starBase
-length(unique(normal_encRNA_sensitivity_goodCorr_bound$mRNA)) # 1262
-length(unique(normal_encRNA_sensitivity_goodCorr_bound$miRNA)) # 9
-length(unique(normal_encRNA_sensitivity_goodCorr_bound$lncRNA)) # 62
-# cancer pairs
-ptm = proc.time()
-tumor_encRNA_sensitivity_goodCorr_bound = get_matched_enRNA_sensitivity_with_putative_binding(tumor_encRNA_goodCorr)
-ptm = proc.time() - ptm; ptm # 11 seconds 
-dim(tumor_encRNA_sensitivity_goodCorr_bound) 
-length(unique(tumor_encRNA_sensitivity_goodCorr_bound$mRNA)) 
-length(unique(tumor_encRNA_sensitivity_goodCorr_bound$miRNA)) 
-length(unique(tumor_encRNA_sensitivity_goodCorr_bound$lncRNA)) 
+# check overlap
+length(intersect(unique(normal_encRNA_sensitivity_bound_goodCoor$encRNA_triple), unique(tumor_encRNA_sensitivity_bound_goodCoor$encRNA_triple)))
+length(intersect(unique(normal_encRNA_sensitivity_bound_goodCoor$mRNA), unique(tumor_encRNA_sensitivity_bound_goodCoor$mRNA)))
+length(intersect(unique(normal_encRNA_sensitivity_bound_goodCoor$miRNA), unique(tumor_encRNA_sensitivity_bound_goodCoor$miRNA)))
+length(intersect(unique(normal_encRNA_sensitivity_bound_goodCoor$lncRNA), unique(tumor_encRNA_sensitivity_bound_goodCoor$lncRNA)))
+length(intersect(unique(normal_encRNA_sensitivity_bound_goodCoor$encRNA_pair), unique(tumor_encRNA_sensitivity_bound_goodCoor$encRNA_pair)))
+
+
+
+# #### follow-up question: out of those encRNA triplets satisfying encRNA hypothesis, how many included in putattive bindining information?
+# #### answer: 1955 triplets for normal pairs, 
+# # normal pairs
+# ptm = proc.time()
+# normal_encRNA_sensitivity_goodCorr_bound = get_matched_enRNA_sensitivity_with_putative_binding(normal_encRNA_goodCorr)
+# ptm = proc.time() - ptm; ptm # 11 seconds 
+# dim(normal_encRNA_sensitivity_goodCorr_bound) # 1955   12 --> 1955 triplets included in miRcode and starBase
+# length(unique(normal_encRNA_sensitivity_goodCorr_bound$mRNA)) 
+# length(unique(normal_encRNA_sensitivity_goodCorr_bound$miRNA)) 
+# length(unique(normal_encRNA_sensitivity_goodCorr_bound$lncRNA)) 
+# length(unique(normal_encRNA_sensitivity_goodCorr_bound$encRNA_pair))
+# 
+# # cancer pairs
+# ptm = proc.time()
+# tumor_encRNA_sensitivity_goodCorr_bound = get_matched_enRNA_sensitivity_with_putative_binding(tumor_encRNA_goodCorr)
+# ptm = proc.time() - ptm; ptm # 11 seconds 
+# dim(tumor_encRNA_sensitivity_goodCorr_bound) 
+# length(unique(tumor_encRNA_sensitivity_goodCorr_bound$mRNA)) 
+# length(unique(tumor_encRNA_sensitivity_goodCorr_bound$miRNA)) 
+# length(unique(tumor_encRNA_sensitivity_goodCorr_bound$lncRNA)) 
+# length(unique(tumor_encRNA_sensitivity_goodCorr_bound$encRNA_pair))
+# 
+# # check overlap
+# length(intersect(unique(normal_encRNA_sensitivity_goodCorr_bound$mRNA), unique(tumor_encRNA_sensitivity_goodCorr_bound$mRNA)))
+# length(intersect(unique(normal_encRNA_sensitivity_goodCorr_bound$miRNA), unique(tumor_encRNA_sensitivity_goodCorr_bound$miRNA)))
+# length(intersect(unique(normal_encRNA_sensitivity_goodCorr_bound$lncRNA), unique(tumor_encRNA_sensitivity_goodCorr_bound$lncRNA)))
+# length(intersect(unique(normal_encRNA_sensitivity_goodCorr_bound$encRNA_pair), unique(tumor_encRNA_sensitivity_goodCorr_bound$encRNA_pair)))
+# 
+# 
+# length(intersect(unique(normal_encRNA_sensitivity_goodCorr_bound$mRNA), unique(tumor_encRNA_sensitivity_goodCorr_bound$mRNA)))
 
 
 # RECAP: the 1,955 triples satisfy 3 conditions:
