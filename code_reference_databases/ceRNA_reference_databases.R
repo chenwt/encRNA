@@ -2,7 +2,7 @@ setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_me
 
 ## ----- miRSponge ----------------------------------------
 
-mirSponge_prediction_miRNA_target = read.table(file = "ceRNA_TargetDatabases/miRSponge/Prediction_of_miRNA_targets_in_miRSponge.txt", 
+mirSponge_prediction_miRNA_target = read.table(file = "data_ceRNA_TargetDatabases/miRSponge/Prediction_of_miRNA_targets_in_miRSponge.txt",
                                                sep = "\t",  header = FALSE, fill = TRUE)
 head(mirSponge_prediction_miRNA_target, 4)
 # V1    V2                          V3                         V4                          V5    V6    V7  V8     V9
@@ -12,13 +12,13 @@ head(mirSponge_prediction_miRNA_target, 4)
 # 4 let-7a IGF1R  3 uugauauguuggaUGAUGGAGu 5                  :|||||||   5 acggtgatcgaggGCTACCTCc 3  1200  1221 141 -14.40
 
 mirSponge_experimentally_validated_ceRNA = 
-  read.csv(file = "ceRNA_TargetDatabases/miRSponge/Experimentally_validated_miRNA_sponges_and_ceRNAs_in_miRSponge.csv",
+  read.csv(file = "data_ceRNA_TargetDatabases/miRSponge/Experimentally_validated_miRNA_sponges_and_ceRNAs_in_miRSponge.csv",
            sep = ",", header = TRUE, fill = TRUE) 
 head(mirSponge_experimentally_validated_ceRNA)
 View(mirSponge_experimentally_validated_ceRNA)
 
 mirSponge_experimentally_validated_miRNA_target = read.table(
-  file = "ceRNA_TargetDatabases/miRSponge/Experimentally_validated_miRNA_targets_in_miRSponge.txt", 
+  file = "data_ceRNA_TargetDatabases/miRSponge/Experimentally_validated_miRNA_targets_in_miRSponge.txt", 
   sep = "\t",  header = TRUE, fill = TRUE)
 head(mirSponge_experimentally_validated_ceRNA)
 View(mirSponge_experimentally_validated_ceRNA)
@@ -26,7 +26,7 @@ View(mirSponge_experimentally_validated_ceRNA)
 ## ----- lnCeDb ----------------------------------------
 
 # miRNA-lncRNA,mRNA -- to be checked!
-lnCeDb_mir_lnc_parclip72 = read.table(file = "ceRNA_TargetDatabases/lnCeDb/mir_lnc_parclip72.txt", 
+lnCeDb_mir_lnc_parclip72 = read.table(file = "data_ceRNA_TargetDatabases/lnCeDb/mir_lnc_parclip72.txt", 
                                       sep = "\t",  header = FALSE)
 head(lnCeDb_mir_lnc_parclip72,3)
 # V1                V2 V3                 V4
@@ -35,7 +35,7 @@ head(lnCeDb_mir_lnc_parclip72,3)
 # 3 hsa-miR-34b-5p ENST00000504246.1  2 7-mer-A1,7-mer-A1,
 
 # miRNA-lncRNA,mRNA -- to be checked!
-lnCeDb_mir_lnc_targets_all = read.table(file = "ceRNA_TargetDatabases/lnCeDb/mir_lnc_targets_all.txt", 
+lnCeDb_mir_lnc_targets_all = read.table(file = "data_ceRNA_TargetDatabases/lnCeDb/mir_lnc_targets_all.txt", 
                                         sep = "\t",  header = FALSE)
 
 head(lnCeDb_mir_lnc_targets_all,2)
@@ -43,7 +43,7 @@ head(lnCeDb_mir_lnc_targets_all,2)
 # 1 hsa-miR-17-5p ENST00000395900.1  4 7-mer-m8,7-mer-m8,7-mer-m8,7-mer-m8,
 # 2 hsa-miR-17-5p ENST00000421848.1  2                   7-mer-m8,7-mer-m8,
 
-lnCeDb_miR_mRNA_lnc_ceRNA = scan(file = "ceRNA_TargetDatabases/lnCeDb/miR_mRNA_lnc_ceRNA.txt", 
+lnCeDb_miR_mRNA_lnc_ceRNA = scan(file = "data_ceRNA_TargetDatabases/lnCeDb/miR_mRNA_lnc_ceRNA.txt", 
                                  what = "", sep = "\n")
 
 lnCeDb_miR_mRNA_lnc_ceRNA = strsplit(lnCeDb_miR_mRNA_lnc_ceRNA, ";")
@@ -61,7 +61,7 @@ names(lnCeDb_miR_mRNA_lnc_ceRNA) = miRNA_names
 
 ## ----- LncACTdb ----------------------------------------
 
-lncACTdb_cancer_associated = read.table(file = "ceRNA_TargetDatabases/LncACTdb/Cancer_associated_lncACTs.txt", 
+lncACTdb_cancer_associated = read.table(file = "data_ceRNA_TargetDatabases/LncACTdb/Cancer_associated_lncACTs.txt", 
                                         sep = "\t",  header = TRUE)
 
 dim(lncACTdb_cancer_associated) # [1] 878   5
@@ -71,8 +71,7 @@ head(lncACTdb_cancer_associated,2)
 # 2 ENSG00000124915 DKFZP434K028 hsa-miR-145  C11orf9    kirp
 
 # miRNA - mRNA
-lncACTdb_experimental_validated_miRNA_targets = read.table(file = "ceRNA_TargetDatabases/LncACTdb/Experimental_validated_miRNA_targets.txt", 
-                                                           sep = "\t",  header = FALSE, fill = TRUE)
+lncACTdb_experimental_validated_miRNA_targets = read.table(file = "data_ceRNA_TargetDatabases/LncACTdb/Experimental_validated_miRNA_targets.txt",  sep = "\t",  header = FALSE, fill = TRUE)
 dim(lncACTdb_experimental_validated_miRNA_targets) # [1] 43497     3
 
 head(lncACTdb_experimental_validated_miRNA_targets)
@@ -81,7 +80,7 @@ head(lncACTdb_experimental_validated_miRNA_targets)
 # 2    hsa-let-7 ENSG00000009307  NRAS
 
 # main table
-lncACTdb_functionally_activated_lncACTS = read.table(file = "ceRNA_TargetDatabases/LncACTdb/Functionally_activated_lncACTS.txt", 
+lncACTdb_functionally_activated_lncACTS = read.table(file = "data_ceRNA_TargetDatabases/LncACTdb/Functionally_activated_lncACTS.txt", 
                                                      sep = "\t",  header = TRUE)
 dim(lncACTdb_functionally_activated_lncACTS) # 5119 
 head(lncACTdb_functionally_activated_lncACTS)
