@@ -16,6 +16,7 @@ load("data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
 require(ppcor); require(rlist);
 require(foreach); require(doParallel);
 require(ggplot2)
+require(WGCNA)
 
 # -------------------- Dimension check --------------------------------------------------
 dim(lncRNA_mRNA_corr_matrix) # [1]  4828 17613
@@ -24,10 +25,78 @@ dim(miRNA_mRNA_corr_matrix) #[1]   343 17613
 
 dim(normal_sensitivity_full) # 850356    343
 
+# ----- test out the useage of bicorrelation -----------------------------------------
+
+#get only subset expression data from normal cells
+normal_indices = 1:79
+mRNA_normal = brca_mRNA_df[,normal_indices];
+miRNA_normal = brca_miRNA_df[,normal_indices];
+lncRNA_normal = brca_lncRNA_df[,normal_indices]
+
+# check how the correlation density different between normal vs tumor?
+WGCNA::bicor(mRNA_normal[1,],miRNA_normal[1,])
+
+test_mRNA = mRNA_normal[1:1000,]
+test_miRNA = miRNA_normal
+
+ptm = proc.time()
+test = getBicorrMatrix(test_miRNA, test_mRNA)
+ptm = proc.time() - ptm; ptm
+
+
+
+# getBicorrMatrix = function(matrix1, matrix2){
+#   corr_matrix = c()
+#   for (i in 1:nrow(matrix1)){
+#     row_matrix1 = matrix1[i,]
+#     corr = sapply(1:nrow(matrix2), function(j) WGCNA::bicor(row_matrix1, matrix2[j,]))
+#     corr_matrix = rbind(corr_matrix, corr)
+#   }
+#   rownames(corr_matrix) = NULL
+#   return(corr_matrix)
+# }
+
+# normal_sensitivity_full = foreach(i = 1:nrow(normal_pairs), .combine = rbind) %dopar% {
+#   require(ppcor)
+#   the_pair = normal_pairs[i,]
+#   mRNA_vector = mRNA_normal[the_pair$mRNA_index,]
+#   lncRNA_vector = lncRNA_normal[the_pair$lncRNA_index,]
+#   sensitivity_corr_vector = c()
+#   for (j in 1:nrow(miRNA_normal)){
+#     partial_corr = pcor.test(mRNA_vector, lncRNA_vector, miRNA_normal[j,])$estimate
+#     sensitivity_corr_vector = append(sensitivity_corr_vector, the_pair$corr - partial_corr)
+#   }
+#   return(sensitivity_corr_vector)
+# }
+
+matrix1 = lncRNA_normal
+matrix2 = mRNA_normal
+
+num_cluster = 4
+cl <- makePSOCKcluster(num_cluster)
+registerDoParallel(cl)
+ptm_normal = proc.time()
+result = foreach(i = 1:nrow(matrix1), .combine = rbind) %dopar% {
+  require(WGCNA)
+  matrix1_vector = matrix1[i,]
+  corr = sapply(1:nrow(matrix2), function(j) WGCNA::bicor(matrix1_vector, matrix2[j,]))
+  return(corr)
+}
+ptm_normal = proc.time() - ptm_normal
+stopCluster(cl)
+sprintf("Running time with %g cores: %g", num_cluster ,ptm_normal[3])
+
+# dim(result)
+# nrow(miRNA_normal); nrow(lncRNA_normal)
+
+rownames(result) = rownames(lncRNA_normal); colnames(result) = rownames(mRNA_normal)
+normal_bicor_lncRNA_mRNA = result
+
+save(normal_bicor_lncRNA_mRNA, normal_bicor_miRNA_lncRNA, file = "data_Saved_R_Objects/corr_matrices/bicor.rda")
 
 # ------------------- Visualization ----------------------------------------------------
 
-# plot density of all correaltion between lncRNA and mRNA
+# plot density of all R between lncRNA and mRNA
 plot(density(tumor_lncRNA_mRNA_corr_matrix), 
      col = "red", lwd = 3, ylim = c(0,4), 
      main = "mRNA - lncRNA correlation (normal and tumor)")
@@ -390,5 +459,88 @@ length(intersect(unique(normal_encRNA_sensitivity_bound_goodCoor$encRNA_pair), u
 
 ### ----------- validation with external databases --------------------------------------------
 
+### import lncACTdb
+lncACTdb_cancer_associated = read.table(file = "data_ceRNA_TargetDatabases/LncACTdb/Cancer_associated_lncACTs.txt", 
+                                        sep = "\t",  header = TRUE)
+
+dim(lncACTdb_cancer_associated) # [1] 878   5
+head(lncACTdb_cancer_associated,2)
+#     lncRNAEnsgID   lncRNAName       miRNA Genename Disease
+# 1 ENSG00000124915 DKFZP434K028 hsa-miR-328     CD44    kirp
+# 2 ENSG00000124915 DKFZP434K028 hsa-miR-145  C11orf9    kirp
+
+# miRNA - mRNA
+lncACTdb_experimental_validated_miRNA_targets = read.table(file = "data_ceRNA_TargetDatabases/LncACTdb/Experimental_validated_miRNA_targets.txt",  sep = "\t",  header = FALSE, fill = TRUE)
+dim(lncACTdb_experimental_validated_miRNA_targets) # [1] 43497     3
+
+head(lncACTdb_experimental_validated_miRNA_targets)
+# V1              V2    V3
+# 1    hsa-let-7 ENSG00000149948 HMGA2
+# 2    hsa-let-7 ENSG00000009307  NRAS
+
+# main table
+lncACTdb_functionally_activated_lncACTS = read.table(file = "data_ceRNA_TargetDatabases/LncACTdb/Functionally_activated_lncACTS.txt", 
+                                                     sep = "\t",  header = TRUE)
+dim(lncACTdb_functionally_activated_lncACTS) # 5119 
+head(lncACTdb_functionally_activated_lncACTS)
+#     lncRNA.Ensembl.ID    lncRNA.Name    miRNA     Gene.Name Gene.Ensembl.ID
+# 1   ENSG00000100181         TPTEP1  hsa-miR-133b    BCL2L2 ENSG00000129473
+# 2   ENSG00000100181         TPTEP1  hsa-miR-133b     PTBP2 ENSG00000117569
+
+### manipulate the lncACTdb matrices to make it comparable with encRNA
+# make miRNA names all lower case
+lncACTdb_cancer_associated$miRNA = tolower(lncACTdb_cancer_associated$miRNA)
+lncACTdb_functionally_activated_lncACTS$miRNA = tolower(lncACTdb_functionally_activated_lncACTS$miRNA)
+# create new variables by concatination
+lncACTdb_cancer_associated$encRNA_pair = paste(lncACTdb_cancer_associated$lncRNAEnsgID, 
+                                               lncACTdb_cancer_associated$Genename,
+                                               sep = "-")
+lncACTdb_cancer_associated$encRNA_triple = paste(lncACTdb_cancer_associated$lncRNAEnsgID, 
+                                               lncACTdb_cancer_associated$Genename, 
+                                               lncACTdb_cancer_associated$miRNA,
+                                               sep = "-")
+lncACTdb_functionally_activated_lncACTS$encRNA_pair = paste(lncACTdb_functionally_activated_lncACTS$lncRNA.Ensembl.ID, 
+                                                            lncACTdb_functionally_activated_lncACTS$Gene.Name,
+                                                            sep = "-")
+lncACTdb_functionally_activated_lncACTS$encRNA_triple = paste(lncACTdb_functionally_activated_lncACTS$lncRNA.Ensembl.ID, 
+                                                            lncACTdb_functionally_activated_lncACTS$Gene.Name,
+                                                            lncACTdb_functionally_activated_lncACTS$miRNA,
+                                                            sep = "-")
+
+### manipulate the encRNA matrices to make it comparable with lncACTdb
+normal_candidate_encRNA = normal_encRNA_sensitivity_bound_goodCoor
+tumor_candidate_encRNA = tumor_encRNA_sensitivity_bound_goodCoor
+# delete decimal digits out of lncRNA ensemble id
+pos = regexpr("\\.", as.character(normal_candidate_encRNA$lncRNA))[1:nrow(normal_candidate_encRNA)]
+normal_candidate_encRNA$lncRNA = substr(as.character(normal_candidate_encRNA$lncRNA), start = 1, stop = pos - 1)
+normal_candidate_encRNA$encRNA_pair = paste(normal_candidate_encRNA$lncRNA, normal_candidate_encRNA$mRNA,
+                                            sep = "-")
+pos = regexpr("\\.", as.character(tumor_candidate_encRNA$lncRNA))[1:nrow(tumor_candidate_encRNA)]
+tumor_candidate_encRNA$lncRNA = substr(as.character(tumor_candidate_encRNA$lncRNA), start = 1, stop = pos - 1)
+tumor_candidate_encRNA$encRNA_pair = paste(tumor_candidate_encRNA$lncRNA, tumor_candidate_encRNA$mRNA,
+                                            sep = "-")
+
+### MAIN ANALYSIS: check overlap
+length(intersect(as.character(normal_candidate_encRNA$encRNA_triple), 
+                 as.character(lncACTdb_functionally_activated_lncACTS$encRNA_triple))) # 0
+length(intersect(as.character(normal_candidate_encRNA$encRNA_pair), 
+                 as.character(lncACTdb_functionally_activated_lncACTS$encRNA_pair))) # 0
+length(intersect(as.character(normal_candidate_encRNA$mRNA), 
+                 as.character(lncACTdb_functionally_activated_lncACTS$Gene.Name))) # 101
+length(intersect(as.character(normal_candidate_encRNA$lncRNA), 
+                 as.character(lncACTdb_functionally_activated_lncACTS$lncRNA.Ensembl.ID))) # 11
+length(intersect(as.character(normal_candidate_encRNA$miRNA), 
+                 as.character(lncACTdb_functionally_activated_lncACTS$miRNA))) 
+
+length(intersect(as.character(normal_candidate_encRNA$encRNA_triple), 
+                 as.character(lncACTdb_cancer_associated$encRNA_triple))) 
+length(intersect(as.character(normal_candidate_encRNA$encRNA_pair), 
+                 as.character(lncACTdb_cancer_associated$encRNA_pair))) 
+length(intersect(as.character(normal_candidate_encRNA$mRNA), 
+                 as.character(lncACTdb_cancer_associated$Gene.Name))) 
+length(intersect(as.character(normal_candidate_encRNA$lncRNA), 
+                 as.character(lncACTdb_cancer_associated$lncRNA.Ensembl.ID))) 
+length(intersect(as.character(normal_candidate_encRNA$miRNA), 
+                 as.character(lncACTdb_cancer_associated$miRNA))) 
 
 

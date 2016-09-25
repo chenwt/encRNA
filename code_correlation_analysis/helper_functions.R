@@ -95,9 +95,11 @@ getMiRNAs = function(miRNA_family = NULL){
 get_putative_lncRNA_miRNA = function(dataframe){
   require(rlist)
   l = list()
+  #i = 1;
   apply(dataframe, 1, function(r){
     k = getMiRNAs(r[2])
     l <<- list.append(l, k)
+    #print(i); i <<- i + 1;
   })
   names(l) = dataframe$gene_id
   df = reshape2::melt(l)
@@ -109,16 +111,17 @@ get_putative_lncRNA_miRNA = function(dataframe){
 get_putative_lncRNA_miRNA_2 = function(dataframe){
   require(rlist)
   l = list()
+  i = 1;
   apply(dataframe, 1, function(r){
     k = getMiRNAs(r[2])
     l <<- list.append(l, k)
+    print(i); i <<- i + 1;
   })
   names(l) = dataframe$gene_id
   df = data.frame(
     miRNA = unlist(l),
     putative_lncRNAs = rep(names(l), lapply(l, length))
   )
-  
   colnames(df) = c("miRNA", "putative_lncRNAs")
   df$lncRNA_miRNA_pair = paste(df$putative_lncRNAs, df$miRNA, sep = "-")
   return(df)
