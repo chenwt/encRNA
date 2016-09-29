@@ -13,6 +13,7 @@ load("data_Saved_R_Objects/corr_matrices/tumor_encRNA_850356.rda")
 load("data_Saved_R_Objects/corr_matrices/normal_sensitivity_full.rda")
 load("data_Saved_R_Objects/corr_matrices/tumor_sensivitivity_full.rda")
 load("data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
+load("data_Saved_R_Objects/miRNA_target/brca_putative_encRNA.rda"); gc()
 require(ppcor); require(rlist);
 require(foreach); require(doParallel);
 require(ggplot2)
@@ -405,27 +406,30 @@ length(intersect(unique(normal_encRNA_goodCorr$encRNA_pair), unique(tumor_encRNA
 
 #### question: out of all triplets, how many included in the putative binding information? 
 #### ans: 21,553 for normal samples; 11,516 for tumor
-# normal samples
-ptm = proc.time()
-normal_encRNA_sensitivity_bound = get_matched_enRNA_sensitivity_with_putative_binding(normal_encRNA)
-ptm = proc.time() - ptm; ptm # 28 seconds
+
+normal_encRNA_sensitivity_bound = get_putative_encRNA_interaction(normal_encRNA)
+tumor_encRNA_sensitivity_bound = get_putative_encRNA_interaction(tumor_encRNA)
+
 dim(normal_encRNA_sensitivity_bound) # 21,553   12
-length(unique(normal_encRNA_sensitivity_bound$mRNA)) # 3563
-length(unique(normal_encRNA_sensitivity_bound$miRNA)) # 17
-length(unique(normal_encRNA_sensitivity_bound$lncRNA)) # 142
+length(unique(normal_encRNA_sensitivity_bound$mRNA)) 
+length(unique(normal_encRNA_sensitivity_bound$miRNA)) 
+length(unique(normal_encRNA_sensitivity_bound$lncRNA)) 
 length(unique(normal_encRNA_sensitivity_bound$encRNA_pair))
-#tumor samples
-ptm = proc.time()
-tumor_encRNA_sensitivity_bound = get_matched_enRNA_sensitivity_with_putative_binding(tumor_encRNA)
-ptm = proc.time() - ptm; ptm # 18 seconds
+
+
 dim(tumor_encRNA_sensitivity_bound) # [1] 11516    13
-length(unique(tumor_encRNA_sensitivity_bound$mRNA)) # 3220
-length(unique(tumor_encRNA_sensitivity_bound$miRNA))# 51
-length(unique(tumor_encRNA_sensitivity_bound$lncRNA)) # 312
+length(unique(tumor_encRNA_sensitivity_bound$mRNA)) 
+length(unique(tumor_encRNA_sensitivity_bound$miRNA))
+length(unique(tumor_encRNA_sensitivity_bound$lncRNA)) 
 length(unique(tumor_encRNA_sensitivity_bound$encRNA_pair))
+
+
+
+
 
 # check overlap
 length(intersect(unique(normal_encRNA_sensitivity_bound$encRNA_triple), unique(tumor_encRNA_sensitivity_bound$encRNA_triple)))
+
 length(intersect(unique(normal_encRNA_sensitivity_bound$mRNA), unique(tumor_encRNA_sensitivity_bound$mRNA)))
 length(intersect(unique(normal_encRNA_sensitivity_bound$miRNA), unique(tumor_encRNA_sensitivity_bound$miRNA)))
 length(intersect(unique(normal_encRNA_sensitivity_bound$lncRNA), unique(tumor_encRNA_sensitivity_bound$lncRNA)))

@@ -127,6 +127,24 @@ get_putative_lncRNA_miRNA_2 = function(dataframe){
   return(df)
 }
 
+get_putative_encRNA_interaction = function(df){
+  if (!("brca_putative_encRNA" %in% ls())){
+    load("data_Saved_R_Objects/miRNA_target/brca_putative_encRNA.rda"); gc()
+  }
+  
+  brca_putative_encRNA_subset = brca_putative_encRNA[which(brca_putative_encRNA$miRNA %in% df$miRNA),]
+  brca_putative_encRNA_subset = brca_putative_encRNA_subset[which(brca_putative_encRNA_subset$lncRNA %in% df$lncRNA),]
+  brca_putative_encRNA_subset = brca_putative_encRNA_subset[which(brca_putative_encRNA_subset$mRNA %in% df$mRNA),]
+  
+  brca_putative_encRNA_subset$encRNA_triple = paste(brca_putative_encRNA_subset$lncRNA, 
+                                                    brca_putative_encRNA_subset$mRNA,
+                                                    brca_putative_encRNA_subset$miRNA,
+                                                    sep = "-")
+  
+  common_triplets = intersect(df$encRNA_triple, brca_putative_encRNA_subset$encRNA_triple)
+  return(normal_encRNA[which(df$encRNA_triple %in% common_triplets),])
+}
+
 
 get_matched_enRNA_sensitivity_with_putative_binding = function(encRNA_sensitivity){
   load("mircode_objects.rda")

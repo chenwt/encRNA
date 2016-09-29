@@ -17,7 +17,6 @@ rm(list = ls()); gc()
 
 # set directory
 setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
-
 load("brca2_TCGA2STAT.rda")
 require(TCGA2STAT)
 ## --------------- SAMPLE MATCHING ---------------------------------------
