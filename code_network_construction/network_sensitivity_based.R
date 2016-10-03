@@ -3,7 +3,7 @@ setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_me
 source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
 source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_network_construction/network_helper_functions.R")
 
-require(data.table); require(igraph)
+require(igraph); require(RCy3); require(plyr); require(dplyr); require(data.table)
 
 load("brca2_TCGA2STAT.rda")
 load("data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
@@ -12,16 +12,27 @@ load("data_Saved_R_Objects/brca_df.rda")
 load("data_Saved_R_Objects/corr_matrices/normal_encRNA_850356.rda")
 load("data_Saved_R_Objects/corr_matrices/tumor_encRNA_850356.rda")
 
-########################################################################################3
-# test code: construct graph of mRNA-miRNA from encRNA_df
-# https://www.r-bloggers.com/network-visualization-part-5-cytoscape-an-update-rcy3/
+##########################################################################################
+########            GENES OR LNCRNAS OF SIMILAR MIRNAS                            ########
+##########################################################################################
 
-require(igraph); require(RCy3); require(plyr); require(dplyr); require(data.table)
+normal_unique_miRNAs = as.character(unique(normal_encRNA_sensitivity_bound_goodCoor$miRNA))
+tumor_unique_miRNAs = as.character(unique(tumor_encRNA_sensitivity_bound_goodCoor$miRNA))
 
-# for testing purpose, subsetting it to only first 10 rows
-normal_encRNA_sensitivity_bound = get_matched_enRNA_sensitivity_with_putative_binding(normal_encRNA)
-tumor_encRNA_sensitivity_bound = get_matched_enRNA_sensitivity_with_putative_binding(tumor_encRNA)
-dim(normal_encRNA_sensitivity_bound) # 21553    12
+normal_RNA_list = get_RNAs_sharing_common_miRNAs(normal_encRNA_sensitivity_bound_goodCoor,normal_unique_miRNAs)
+normal_mRNA_list = normal_RNA_list[['mRNA']]; normal_lncRNA_list = normal_RNA_list[['lncRNA']]
+tumor_RNA_list = get_RNAs_sharing_common_miRNAs(tumor_encRNA_sensitivity_bound_goodCoor,tumor_unique_miRNAs)
+tumor_mRNA_list = tumor_RNA_list[['mRNA']]; tumor_lncRNA_list = tumor_RNA_list[['lncRNA']]
+
+## GOTerm enrichment analysis on those normal_mRNA_list
+all_ensembl_gene_symbols = get_all_human_ensemble()
+normal_mRNA_list = get_mRNAs_in_Ensemble(geneList = normal_mRNA_list,ensemble = all_ensembl_gene_symbols)
+tumor_mRNA_list = get_mRNAs_in_Ensemble(geneList = tumor_mRNA_list,ensemble = all_ensembl_gene_symbols)
+
+result = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
+                          gene_list = normal_mRNA_list[[1]],
+                          topNodes = 20)
+
 
 
 ##########################################################################################
@@ -31,8 +42,37 @@ dim(normal_encRNA_sensitivity_bound) # 21553    12
 normal_encRNA_graph = build_iGraph(df = normal_encRNA_sensitivity_bound_goodCoor)
 tumor_encRNA_graph = build_iGraph(df = tumor_encRNA_sensitivity_bound_goodCoor)
 
-graph.density(normal_encRNA_graph)
-graph.density(tumor_encRNA_graph)
+## ----- basic network statistic ------------------------- 
+
+# vertice and edge count
+vcount(normal_encRNA_graph); ecount(normal_encRNA_graph) # 359, 1907
+V(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "mRNA")] # 301
+V(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "lncRNA")] # 58
+
+vcount(tumor_encRNA_graph); ecount(tumor_encRNA_graph) # [1] 1302, 1218
+V(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "mRNA")] # 956
+V(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "lncRNA")] # 346
+
+# select hub genes
+normal_mRNA_degree = igraph::degree(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "mRNA")]
+normal_lncRNA_degree = igraph::degree(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "lncRNA")]
+tumor_mRNA_degree = igraph::degree(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "mRNA")]
+tumor_lncRNA_degree = igraph::degree(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "lncRNA")]
+
+par(mfrow = c(2,2))
+hist(normal_mRNA_degree, breaks = length(unique(normal_mRNA_degree)))
+hist(normal_lncRNA_degree, breaks = length(unique(normal_lncRNA_degree)))
+hist(tumor_mRNA_degree, breaks = length(unique(tumor_mRNA_degree)))
+hist(tumor_lncRNA_degree, breaks = length(unique(tumor_lncRNA_degree)))
+
+
+# graph density
+graph.density(normal_encRNA_graph) # [1] 0.02967585
+graph.density(tumor_encRNA_graph) # [1] 0.0014381
+
+# clustering coefficent
+
+## 
 
 ## ----- obtain list of mRNAs ------------------------- 
 module_normal_encRNA_graph = cluster_louvain(normal_encRNA_graph,weights = E(normal_encRNA_graph)$weight)
@@ -40,17 +80,22 @@ module_tumor_encRNA_graph = cluster_louvain(tumor_encRNA_graph,weights = E(tumor
 
 normal_encRNA_graph_membership = getAllSubgraphsFromMembership(igraphObject = normal_encRNA_graph,
                                                                membership = module_normal_encRNA_graph$membership)
-test = normal_encRNA_graph_membership[[1]]
-vcount(test)
-V(test)$type
+tumor_encRNA_graph_membership = getAllSubgraphsFromMembership(igraphObject = tumor_encRNA_graph,
+                                                               membership = module_tumor_encRNA_graph$membership)
 
 #### get the list of mRNAs
 normal_encRNA_mRNA_list = lapply(normal_encRNA_graph_membership, function(graph){
   names(V(graph)[which(V(graph)$type == "mRNA")])
 })
 
+tumor_encRNA_mRNA_list = lapply(tumor_encRNA_graph_membership, function(graph){
+  names(V(graph)[which(V(graph)$type == "mRNA")])
+})
+
 #########################################################
 ## ------ perform enrichment analysis -------------------
+## (must perform above steps)
+setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 load("brca2_TCGA2STAT.rda")
 load("data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
 
@@ -58,44 +103,37 @@ require(topGO); require(biomaRt)
 # general idea: for each mRNA list, perform topGo enrichment
 
 # get all possible ids
-ensembl = useEnsembl(biomart="ensembl", dataset="hsapiens_gene_ensembl", version = 85)
-listDatasets(ensembl)
-mart = useDataset("hsapiens_gene_ensembl", mart= ensembl)
-all_ensembl_gene_symbols = getBM(attributes = c("hgnc_symbol","external_gene_name"),
-                                 values = "*", mart = mart)
-length(all_ensembl_gene_symbols$hgnc_symbol) # 35,524
-
+all_ensembl_gene_symbols = get_all_human_ensemble()
 # get the genes from the module which are also includedi the ensemble gene symbols
 # this step would need some refinement
+normal_encRNA_mRNA_list = get_mRNAs_in_Ensemble(geneList = normal_encRNA_mRNA_list,
+                                                ensemble = all_ensembl_gene_symbols)
+tumor_encRNA_mRNA_list = get_mRNAs_in_Ensemble(geneList = tumor_encRNA_mRNA_list,
+                                                ensemble = all_ensembl_gene_symbols)
 
-normal_encRNA_mRNA_list = lapply(normal_encRNA_mRNA_list, function(gene_list){
-  gene_list = gene_list[which(gene_list %in% all_ensembl_gene_symbols$hgnc_symbol)]; 
-})
+tumor_encRNA_mRNA_list = tumor_encRNA_mRNA_list[-which(length_gene_list <= 1)]
 
 # perform GO enrichment analysis for each element in the list
 normal_encRNA_module_enrichment = list()
+tumor_encRNA_module_enrichment = list()
+
 require(rlist); require(org.Hs.eg.db)
 
-lapply(normal_encRNA_mRNA_list[1:2], function(mRNA_group){
-  universe = factor(as.integer(all_ensembl_gene_symbols$hgnc_symbol %in% mRNA_group))
-  names(universe) = all_ensembl_gene_symbols$hgnc_symbol
-  
-  GOdata = new('topGOdata',
-               ontology="MF",
-               allGenes=universe,
-               annot=annFUN.org,
-               mapping="org.Hs.eg.db", 
-               ID="symbol")
-  
-  #fischer
-  resultFis <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
-  
-  #top 20 significant nodes determined by KS method, can compare to classic 
-  #fischer and weight
-  allRes <- GenTable(GOdata, classicFisher = resultFis, 
-                     orderBy = "classicFisher", ranksOf = "classicFisher", topNodes = 20)
+lapply(normal_encRNA_mRNA_list, function(mRNA_group){
+  allRes = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols, 
+                            gene_list = mRNA_group, 
+                            topNodes = 20)
   normal_encRNA_module_enrichment <<- list.append(normal_encRNA_module_enrichment,allRes)
 })
+
+lapply(tumor_encRNA_mRNA_list, function(mRNA_group){
+  allRes = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols, 
+                            gene_list = mRNA_group, 
+                            topNodes = 20)
+  tumor_encRNA_module_enrichment <<- list.append(tumor_encRNA_module_enrichment,allRes)
+})
+
+save(normal_encRNA_module_enrichment, tumor_encRNA_module_enrichment, file = "data_Saved_R_Objects/louvain_enrichment.rda")
 
 #########################################################
 ## ------ perform survival analysis----------------------
@@ -153,73 +191,3 @@ clinical$SurvObj <- with(clinical, Surv(time, vitalstatus == 1))
 # EXTRA: use Cox-Lasso as an idenpedent steps to select distinct genes in term of survival
 
 
-########################################################################################
-###               Export to Cytoscape                                         ##########
-########################################################################################
-# list multiple edges
-E(graph_encRNA)[which_multiple(graph_encRNA,  eids = E(graph_encRNA))]
-
-graphNel_obj <- igraph::as_graphnel(graph_encRNA); gc()
-#save(graphNel_obj, file = "graphNel_obj.rda")
-# check to see 
-graph::nodeData(graphNel_obj, igraph::V(graph_encRNA)$name, 'color')
-graph::nodeData(graphNel_obj, igraph::V(graph_encRNA)$name, 'type')
-graph::edgeData(graphNel_obj, 
-                as.character(encRNA_df$lncRNA), 
-                as.character(encRNA_df$mRNA),
-                'weight')
-
-# init attributes
-graphNel_obj <- RCy3::initNodeAttribute(graphNel_obj, 'color', 'char', 'a') 
-graphNel_obj <- RCy3::initNodeAttribute(graphNel_obj, 'type', 'char', 'a') 
-graphNel_obj <- RCy3::initEdgeAttribute (graphNel_obj, "weight", 'numeric', 0)
-
-# Next, we will create a new graph window in cytoscape
-# cytoscape_window <- RCy3::CytoscapeWindow("encRNA_normal", graph = graphNel_obj, overwriteWindow = TRUE)
-cytoscape_window <- RCy3::CytoscapeWindow("encRNA_tumor", graph = graphNel_obj, overwriteWindow = TRUE)
-
-# We can display graph, with defaults color/size scheme
-RCy3::displayGraph(cytoscape_window)
-
-# set node and edge attributes
-RCy3::setNodeAttributesDirect(cytoscape_window, 'type', 'char', 
-                              igraph::V(graph_encRNA)$name, 
-                              igraph::V(graph_encRNA)$type)
-RCy3::setNodeAttributesDirect(cytoscape_window, 'color', 'char', 
-                              igraph::V(graph_encRNA)$name, 
-                              igraph::V(graph_encRNA)$color)
-
-
-edge_names = names(RCy3::cy2.edge.names (cytoscape_window@graph))
-
-# test$pair = as.factor(test$pair)
-# test$pair = gdata::reorder.factor(test$pair, new.order=edge_names)
-# test %>% dplyr::arrange(pair)
-encRNA_df = encRNA_df[match(edge_names, encRNA_df$pair),]
-
-RCy3::setEdgeAttributesDirect(obj = cytoscape_window, 
-                              attribute.name = 'weight', 
-                              attribute.type = 'numeric', 
-                              edge.names = as.character (RCy3::cy2.edge.names (cytoscape_window@graph)), 
-                              values = encRNA_df$sensitivity)
-
-
-# If you also want to choose a layout from R, a list  of available layouts can be accessed as follow:
-cy <- RCy3::CytoscapeConnection()
-hlp <-RCy3::getLayoutNames(cy)
-# hlp
-# [1] "attribute-circle"      "stacked-node-layout"   "degree-circle"         "circular"              "attributes-layout"     "kamada-kawai"         
-# [7] "force-directed"        "grid"                  "hierarchical"          "fruchterman-rheingold" "isom"      
-# We'll select the "fruchterman-rheingold" layout. This layout is the layout number 10 
-# To see properties for the given layout, use:
-# RCy3::getLayoutPropertyNames(cy, hlp[10])
-# We can choose any property we want and provide them as a list
-#RCy3::setLayoutProperties (cytoscape_window, hlp[10], list (gravity_multiplier = 'similarity', nIterations = 1))
-RCy3::setLayoutProperties (cytoscape_window, hlp[10], list (gravity_multiplier = 'similarity', nIterations = 1))
-RCy3::layoutNetwork(cytoscape_window, hlp[10])
-
-RCy3::setDefaultNodeSize(cytoscape_window, 50)
-RCy3::setDefaultNodeFontSize(cytoscape_window, 10)
-
-
-######################################################################################

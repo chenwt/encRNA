@@ -1,6 +1,6 @@
-# setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
-# source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
-# load("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/data_Saved_R_Objects/brca_df.rda")
+setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
+load("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/data_Saved_R_Objects/brca_df.rda")
 
 setwd("/home/MARQNET/0099dod/encRNA/biweight_correlation")
 load("/home/MARQNET/0099dod/encRNA/brca_df.rda")
@@ -8,7 +8,7 @@ load("/home/MARQNET/0099dod/encRNA/brca_df.rda")
 # load("data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
 # load("data_Saved_R_Objects/corr_matrices/normal_sensitivity_full.rda")
 
-
+### ----------- SET UP DATA FRAME OF GENE EXPRESSION -------------------------------------
 # get only subset expression data from normal cells
 normal_indices = 1:79
 mRNA_normal = brca_mRNA_df[,normal_indices];
@@ -52,6 +52,27 @@ save(tumor_bicor_lncRNA_mRNA, file = "biweight_correlation/tumor_bicor_lncRNA_mR
 
 
 ## ------------ TEST MUTUAL INFORMATION ------------------------------------------------
+require(infotheo)
+
+# discretize data frame 
+mRNA_normal = infotheo::discretize(mRNA_normal)
+miRNA_normal = infotheo::discretize(miRNA_normal)
+lncRNA_normal = infotheo::discretize(lncRNA_normal)
+
+mRNA_tumor = infotheo::discretize(mRNA_tumor)
+miRNA_tumor = infotheo::discretize(miRNA_tumor)
+lncRNA_tumor = infotheo::discretize(lncRNA_tumor)
+
+mutualInfoVector = c()
+for (i in 1:nrow(mRNA_normal)){
+  print(i)
+  I = infotheo::mutinformation(miRNA_normal[2,], mRNA_normal[i,])
+  mutualInfoVector = append(mutualInfoVector, I)
+}
+
+
+#---------------------------------------------------------------------------------------
+
 
 
 

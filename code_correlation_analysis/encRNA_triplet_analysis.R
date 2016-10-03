@@ -120,5 +120,9 @@ save(normal_encRNA_sensitivity_bound_goodCoor, tumor_encRNA_sensitivity_bound_go
      file = "data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
 
 ########################################################################################
-####       Statistics on putative triplet                       ########################
+####       Select all sensitivity > 0                           ########################
 ########################################################################################
+
+setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
+load("data_Saved_R_Objects/corr_matrices/normal_sensitivity_full.rda"); gc()
