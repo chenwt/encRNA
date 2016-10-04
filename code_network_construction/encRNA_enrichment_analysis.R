@@ -2,7 +2,7 @@ setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_me
 source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
 source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_network_construction/network_helper_functions.R")
 
-require(igraph); require(RCy3); require(plyr); require(dplyr); require(data.table)
+require(igraph); require(RCy3); require(plyr); require(dplyr); require(data.table); require(rlist)
 
 load("brca2_TCGA2STAT.rda")
 load("data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
@@ -21,25 +21,37 @@ tumor_unique_miRNAs = as.character(unique(tumor_encRNA_sensitivity_bound_goodCoo
 length(normal_unique_miRNAs) # 7
 length(tumor_unique_miRNAs) # 21
 
+#### obtain list of mRNA and lncRNA sharing similar miRNAs
 normal_RNA_list = get_RNAs_sharing_common_miRNAs(normal_encRNA_sensitivity_bound_goodCoor,normal_unique_miRNAs)
 normal_mRNA_list = normal_RNA_list[['mRNA']]; normal_lncRNA_list = normal_RNA_list[['lncRNA']]
+length(normal_mRNA_list) #7
 tumor_RNA_list = get_RNAs_sharing_common_miRNAs(tumor_encRNA_sensitivity_bound_goodCoor,tumor_unique_miRNAs)
 tumor_mRNA_list = tumor_RNA_list[['mRNA']]; tumor_lncRNA_list = tumor_RNA_list[['lncRNA']]
+length(tumor_mRNA_list) # 21
 
-## GOTerm enrichment analysis on those normal_mRNA_list
+#### GOTerm enrichment analysis on those normal_mRNA_list
 # obtain all ensemble gene symbols
 all_ensembl_gene_symbols = get_all_human_ensemble()
+
 # filter the RNA list to include only those having annotated in ensemble
 normal_mRNA_list = get_mRNAs_in_Ensembl(geneList = normal_mRNA_list,
                                         ensemble = all_ensembl_gene_symbols,
                                         minimumSize = 4)
+length(normal_mRNA_list) # 7
 tumor_mRNA_list = get_mRNAs_in_Ensembl(geneList = tumor_mRNA_list,
                                        ensemble = all_ensembl_gene_symbols,
                                        minimumSize = 4)
+length(tumor_mRNA_list) # 8 (decreased from 21)
 
-result = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
-                          gene_list = normal_mRNA_list[[1]],
-                          topNodes = 20)
+#### obtain result from topGo
+normal_mRNA_topGo_common_miRNAs = list()
+for (i in 1:length(normal_mRNA_list)){
+  result = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
+                            gene_list = normal_mRNA_list[[i]],
+                            topNodes = 20)
+  normal_mRNA_topGo_common_miRNAs = list.append(normal_mRNA_topGo_common_miRNAs, result)
+}
+
 # plot Go Term
 # http://stackoverflow.com/questions/6901405/r-ggplot-ordering-bars-in-barplot-like-plot
 require(ggplot2)
@@ -47,7 +59,6 @@ result$Term = reorder(result$Term, -log10(as.numeric(result$classicFisher)))
 ggplot2::ggplot(data = result,
        mapping = aes(x = result$Term, y = -log10(as.numeric(result$classicFisher)), fill = result$Group)) + geom_bar(stat = "identity") + coord_flip()
   
-
 
 ##########################################################################################
 ########            Module Detection and Analysis                                 ########
@@ -104,8 +115,7 @@ tumor_encRNA_mRNA_list = lapply(tumor_encRNA_graph_membership, function(graph){
   names(V(graph)[which(V(graph)$type == "mRNA")])
 })
 
-#########################################################
-## ------ perform enrichment analysis -------------------
+## ------ perform enrichment analysis on modules-------------------
 ## (must perform above steps)
 setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 load("brca2_TCGA2STAT.rda")
