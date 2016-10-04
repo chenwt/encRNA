@@ -45,10 +45,16 @@ get_all_human_ensemble = function(){
   return(all_ensembl_gene_symbols)
 }
 
-get_mRNAs_in_Ensemble = function(geneList, ensemble){
+get_mRNAs_in_Ensembl = function(geneList, ensemble, minimumSize){
   encRNA_mRNA_list = lapply(geneList, function(gene_list){
     gene_list = gene_list[which(gene_list %in% ensemble$hgnc_symbol)]; 
   })
+  encRNA_mRNA_size = unlist(lapply(encRNA_mRNA_list, function(gene_list){
+    length(gene_list)
+  }))
+  if(length(which(encRNA_mRNA_size < minimumSize)) != 0){
+    encRNA_mRNA_list = encRNA_mRNA_list[-which(encRNA_mRNA_size < minimumSize)]
+  }
   return(encRNA_mRNA_list)
 }
 
@@ -89,7 +95,7 @@ get_TopGo_result = function(all_ensembl_gene_symbols, gene_list, topNodes){
                      orderBy = "classicFisher", 
                      ranksOf = "classicFisher", 
                      topNodes = topNodes)
-  
+  allRes$Group = AnnotationDbi::Ontology(allRes$GO.ID)
   return(allRes)
 }
 
