@@ -99,3 +99,25 @@ get_TopGo_result = function(all_ensembl_gene_symbols, gene_list, topNodes){
   return(allRes)
 }
 
+get_node_betweeness = function(igraph_object, RNA_type){
+  betweenness = igraph::betweenness(igraph_object)
+  return(sort(betweenness[which(V(igraph_object)$type == RNA_type)],decreasing = T))
+}
+
+get_node_degree = function(igraph_object, RNA_type){
+  degree = igraph::degree(igraph_object)[which(V(igraph_object)$type == RNA_type)]
+  return(sort(degree,decreasing = T))
+}
+
+get_mRNAs_connected_to_lncRNA = function(igraph_object, lncRNA_vector){
+  require(rlist)
+  result = list()
+  for(i in 1:length(lncRNA_vector)){
+    intra_edges = E(igraph_object) [ from(lncRNA_vector[i])]
+    mRNAs = unique(names(V(igraph_object)[get.edges(igraph_object,intra_edges)[,1]]))
+    result = list.append(result, mRNAs)
+  }
+  names(result) = lncRNA_vector
+  return(result)
+}
+

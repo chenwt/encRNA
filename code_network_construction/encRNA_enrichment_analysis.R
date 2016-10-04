@@ -79,10 +79,10 @@ V(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "mRNA")] # 956
 V(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "lncRNA")] # 346
 
 # select hub genes
-normal_mRNA_degree = igraph::degree(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "mRNA")]
-normal_lncRNA_degree = igraph::degree(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "lncRNA")]
-tumor_mRNA_degree = igraph::degree(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "mRNA")]
-tumor_lncRNA_degree = igraph::degree(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "lncRNA")]
+normal_mRNA_degree = get_node_degree(normal_encRNA_graph, "mRNA")
+normal_lncRNA_degree = get_node_degree(normal_encRNA_graph, "lncRNA")
+tumor_mRNA_degree = get_node_degree(tumor_encRNA_graph, "mRNA")
+tumor_lncRNA_degree = get_node_degree(tumor_encRNA_graph, "lncRNA")
 
 par(mfrow = c(2,2))
 hist(normal_mRNA_degree, breaks = length(unique(normal_mRNA_degree)))
@@ -95,7 +95,24 @@ par(mfrow = c(1,1))
 graph.density(normal_encRNA_graph) # [1] 0.02967585
 graph.density(tumor_encRNA_graph) # [1] 0.0014381
 
-# clustering coefficent
+# node betweenness
+normal_mRNA_betweeness = get_node_betweeness(normal_encRNA_graph, "mRNA")
+normal_lncRNA_betweeness = get_node_betweeness(normal_encRNA_graph, "lncRNA")
+tumor_mRNA_betweeness = get_node_betweeness(tumor_encRNA_graph, "mRNA")
+tumor_lncRNA_betweeness = get_node_betweeness(tumor_encRNA_graph, "lncRNA")
+
+par(mfrow = c(2,2))
+hist(normal_mRNA_betweeness, breaks = length(unique(normal_mRNA_betweeness)))
+hist(normal_lncRNA_betweeness, breaks = length(unique(normal_lncRNA_betweeness)))
+hist(tumor_mRNA_betweeness, breaks = length(unique(tumor_mRNA_betweeness)))
+hist(tumor_lncRNA_betweeness, breaks = length(unique(tumor_lncRNA_betweeness)))
+par(mfrow = c(1,1))
+
+intra_edges = E(normal_encRNA_graph) [ from("ENSG00000229852.2") ]
+V(normal_encRNA_graph)[get.edges(normal_encRNA_graph,intra_edges)[,1]]
+
+test = get_mRNAs_connected_to_lncRNA(normal_encRNA_graph,names(normal_lncRNA_degree))
+
 
 ## ----- obtain list of mRNAs ------------------------- 
 module_normal_encRNA_graph = cluster_louvain(normal_encRNA_graph,weights = E(normal_encRNA_graph)$weight)
