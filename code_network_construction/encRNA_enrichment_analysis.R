@@ -3,6 +3,7 @@ source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_m
 source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_network_construction/network_helper_functions.R")
 
 require(igraph); require(RCy3); require(plyr); require(dplyr); require(data.table); require(rlist)
+require(ggplot2); require(gridExtra); require(GO.db)
 
 load("brca2_TCGA2STAT.rda")
 load("data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
@@ -11,27 +12,64 @@ load("data_Saved_R_Objects/brca_df.rda")
 load("data_Saved_R_Objects/corr_matrices/normal_encRNA_850356.rda")
 load("data_Saved_R_Objects/corr_matrices/tumor_encRNA_850356.rda")
 
+# ------------ helper function ----------------------------------------------------------
+
+plot_ea = function(data, title){
+  require(ggplot2)
+  data$Term = reorder(data$Term, -log10(as.numeric(data$classicFisher)))
+  ggplot2::ggplot(data = data,
+                  mapping = aes(x = Term, y = -log10(as.numeric(classicFisher)), fill = Group)) + geom_bar(stat = "identity") + xlab("GO Term")+  ylab("-log10(p-value)") + coord_flip()+ ggtitle(title)
+}
+
+
 ##########################################################################################
 ########            GENES OR LNCRNAS OF SIMILAR MIRNAS                            ########
 ##########################################################################################
 
-normal_unique_miRNAs = as.character(unique(normal_encRNA_sensitivity_bound_goodCoor$miRNA))
-tumor_unique_miRNAs = as.character(unique(tumor_encRNA_sensitivity_bound_goodCoor$miRNA))
+normal_miRNAs = as.character(unique(normal_encRNA_sensitivity_bound_goodCoor$miRNA))
+tumor_miRNAs = as.character(unique(tumor_encRNA_sensitivity_bound_goodCoor$miRNA))
+normal_mRNAs = unique(normal_encRNA_sensitivity_bound_goodCoor$mRNA)
+normal_lncRNAs = unique(normal_encRNA_sensitivity_bound_goodCoor$lncRNA)
+tumor_mRNAs = unique(tumor_encRNA_sensitivity_bound_goodCoor$mRNA); # tumor_mRNAs = tumor_mRNAs[-241]
+tumor_lncRNAs = unique(tumor_encRNA_sensitivity_bound_goodCoor$lncRNA)
 
-length(normal_unique_miRNAs) # 7
-length(tumor_unique_miRNAs) # 21
+length(normal_miRNAs) # 7
+length(tumor_miRNAs) # 21
+
+write(tumor_miRNAs, file = "data_Saved_R_Objects/encRNA_network/tumor_miRNA.txt")
+
+
+
+#### --------- obtain all ensemble gene symbols -----------------------------------------
+all_ensembl_gene_symbols = get_all_human_ensemble()
+
+
+##########################################################################################
+#### Enrichment analysis for all mRNAs
+##########################################################################################
+
+par(mfrow = c(1,2))
+normal_mRNA_ea = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
+                          gene_list = normal_mRNAs,
+                          topNodes = 20)
+tumor_mRNA_ea = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
+                                  gene_list = tumor_mRNAs,
+                                  topNodes = 20)
+p1 = plot_ea(normal_mRNA_ea, "mRNA normal")
+p2 = plot_ea(tumor_mRNA_ea, "mRNA tumor")
+grid.arrange(p1, p2, ncol=2)
+
+##########################################################################################
+#### GOTerm enrichment analysis on all mRNA sharing similar miRNA
+##########################################################################################
 
 #### obtain list of mRNA and lncRNA sharing similar miRNAs
-normal_RNA_list = get_RNAs_sharing_common_miRNAs(normal_encRNA_sensitivity_bound_goodCoor,normal_unique_miRNAs)
+normal_RNA_list = get_RNAs_sharing_common_miRNAs(normal_encRNA_sensitivity_bound_goodCoor,normal_miRNAs)
 normal_mRNA_list = normal_RNA_list[['mRNA']]; normal_lncRNA_list = normal_RNA_list[['lncRNA']]
 length(normal_mRNA_list) #7
-tumor_RNA_list = get_RNAs_sharing_common_miRNAs(tumor_encRNA_sensitivity_bound_goodCoor,tumor_unique_miRNAs)
+tumor_RNA_list = get_RNAs_sharing_common_miRNAs(tumor_encRNA_sensitivity_bound_goodCoor,tumor_miRNAs)
 tumor_mRNA_list = tumor_RNA_list[['mRNA']]; tumor_lncRNA_list = tumor_RNA_list[['lncRNA']]
 length(tumor_mRNA_list) # 21
-
-#### GOTerm enrichment analysis on those normal_mRNA_list
-# obtain all ensemble gene symbols
-all_ensembl_gene_symbols = get_all_human_ensemble()
 
 # filter the RNA list to include only those having annotated in ensemble
 normal_mRNA_list = get_mRNAs_in_Ensembl(geneList = normal_mRNA_list,
@@ -51,14 +89,30 @@ for (i in 1:length(normal_mRNA_list)){
                             topNodes = 20)
   normal_mRNA_topGo_common_miRNAs = list.append(normal_mRNA_topGo_common_miRNAs, result)
 }
+names(normal_mRNA_topGo_common_miRNAs) = names(normal_mRNA_list)
 
-# plot Go Term
-# http://stackoverflow.com/questions/6901405/r-ggplot-ordering-bars-in-barplot-like-plot
-require(ggplot2)
-result$Term = reorder(result$Term, -log10(as.numeric(result$classicFisher)))
-ggplot2::ggplot(data = result,
-       mapping = aes(x = result$Term, y = -log10(as.numeric(result$classicFisher)), fill = result$Group)) + geom_bar(stat = "identity") + coord_flip()
-  
+go_term = c()
+sapply(normal_mRNA_topGo_common_miRNAs, function(df){
+  go_term <<- append(go_term, df$GO.ID)
+})
+Term(go_term[duplicated(go_term)])
+
+tumor_mRNA_topGo_common_miRNAs = list()
+for (i in 1:length(normal_mRNA_list)){
+  result = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
+                            gene_list = tumor_mRNA_list[[i]],
+                            topNodes = 20)
+  tumor_mRNA_topGo_common_miRNAs = list.append(tumor_mRNA_topGo_common_miRNAs, result)
+}
+names(tumor_mRNA_topGo_common_miRNAs) = names(tumor_mRNA_list)
+
+##########################################################################################
+#### GOTerm enrichment analysis on all on miRNAs
+##########################################################################################
+normal_miRNAs = gsub(x = normal_miRNAs, pattern = "mir", replacement = "miR")
+tumor_miRNAs = gsub(x = tumor_miRNAs, pattern = "mir", replacement = "miR")
+write(normal_miRNAs, file = "data_Saved_R_Objects/encRNA_network/normal_miRNAs.txt")
+write(tumor_miRNAs, file = "data_Saved_R_Objects/encRNA_network/tumor_miRNAs.txt")
 
 ##########################################################################################
 ########            Module Detection and Analysis                                 ########
@@ -66,53 +120,6 @@ ggplot2::ggplot(data = result,
 
 normal_encRNA_graph = build_iGraph(df = normal_encRNA_sensitivity_bound_goodCoor)
 tumor_encRNA_graph = build_iGraph(df = tumor_encRNA_sensitivity_bound_goodCoor)
-
-## ----- basic network statistic ------------------------- 
-
-# vertice and edge count
-vcount(normal_encRNA_graph); ecount(normal_encRNA_graph) # 359, 1907
-V(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "mRNA")] # 301
-V(normal_encRNA_graph)[which(V(normal_encRNA_graph)$type == "lncRNA")] # 58
-
-vcount(tumor_encRNA_graph); ecount(tumor_encRNA_graph) # [1] 1302, 1218
-V(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "mRNA")] # 956
-V(tumor_encRNA_graph)[which(V(tumor_encRNA_graph)$type == "lncRNA")] # 346
-
-# select hub genes
-normal_mRNA_degree = get_node_degree(normal_encRNA_graph, "mRNA")
-normal_lncRNA_degree = get_node_degree(normal_encRNA_graph, "lncRNA")
-tumor_mRNA_degree = get_node_degree(tumor_encRNA_graph, "mRNA")
-tumor_lncRNA_degree = get_node_degree(tumor_encRNA_graph, "lncRNA")
-
-par(mfrow = c(2,2))
-hist(normal_mRNA_degree, breaks = length(unique(normal_mRNA_degree)))
-hist(normal_lncRNA_degree, breaks = length(unique(normal_lncRNA_degree)))
-hist(tumor_mRNA_degree, breaks = length(unique(tumor_mRNA_degree)))
-hist(tumor_lncRNA_degree, breaks = length(unique(tumor_lncRNA_degree)))
-par(mfrow = c(1,1))
-
-# graph density
-graph.density(normal_encRNA_graph) # [1] 0.02967585
-graph.density(tumor_encRNA_graph) # [1] 0.0014381
-
-# node betweenness
-normal_mRNA_betweeness = get_node_betweeness(normal_encRNA_graph, "mRNA")
-normal_lncRNA_betweeness = get_node_betweeness(normal_encRNA_graph, "lncRNA")
-tumor_mRNA_betweeness = get_node_betweeness(tumor_encRNA_graph, "mRNA")
-tumor_lncRNA_betweeness = get_node_betweeness(tumor_encRNA_graph, "lncRNA")
-
-par(mfrow = c(2,2))
-hist(normal_mRNA_betweeness, breaks = length(unique(normal_mRNA_betweeness)))
-hist(normal_lncRNA_betweeness, breaks = length(unique(normal_lncRNA_betweeness)))
-hist(tumor_mRNA_betweeness, breaks = length(unique(tumor_mRNA_betweeness)))
-hist(tumor_lncRNA_betweeness, breaks = length(unique(tumor_lncRNA_betweeness)))
-par(mfrow = c(1,1))
-
-intra_edges = E(normal_encRNA_graph) [ from("ENSG00000229852.2") ]
-V(normal_encRNA_graph)[get.edges(normal_encRNA_graph,intra_edges)[,1]]
-
-test = get_mRNAs_connected_to_lncRNA(normal_encRNA_graph,names(normal_lncRNA_degree))
-
 
 ## ----- obtain list of mRNAs ------------------------- 
 module_normal_encRNA_graph = cluster_louvain(normal_encRNA_graph,weights = E(normal_encRNA_graph)$weight)
