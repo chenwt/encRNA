@@ -21,6 +21,9 @@ plot_ea = function(data, title){
                   mapping = aes(x = Term, y = -log10(as.numeric(classicFisher)), fill = Group)) + geom_bar(stat = "identity") + xlab("GO Term")+  ylab("-log10(p-value)") + coord_flip()+ ggtitle(title)
 }
 
+#### -------------- obtain all ensemble gene symbols --------------------------------
+all_ensembl_gene_symbols = get_all_human_ensemble()
+
 
 ##########################################################################################
 ########            GENES OR LNCRNAS OF SIMILAR MIRNAS                            ########
@@ -38,12 +41,6 @@ length(tumor_miRNAs) # 21
 
 write(tumor_miRNAs, file = "data_Saved_R_Objects/encRNA_network/tumor_miRNA.txt")
 
-
-
-#### --------- obtain all ensemble gene symbols -----------------------------------------
-all_ensembl_gene_symbols = get_all_human_ensemble()
-
-
 ##########################################################################################
 #### Enrichment analysis for all mRNAs
 ##########################################################################################
@@ -51,10 +48,10 @@ all_ensembl_gene_symbols = get_all_human_ensemble()
 par(mfrow = c(1,2))
 normal_mRNA_ea = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
                           gene_list = normal_mRNAs,
-                          topNodes = 20)
+                          topNodes = 100)
 tumor_mRNA_ea = get_TopGo_result(all_ensembl_gene_symbols = all_ensembl_gene_symbols,
                                   gene_list = tumor_mRNAs,
-                                  topNodes = 20)
+                                  topNodes = 100)
 p1 = plot_ea(normal_mRNA_ea, "mRNA normal")
 p2 = plot_ea(tumor_mRNA_ea, "mRNA tumor")
 grid.arrange(p1, p2, ncol=2)
@@ -95,6 +92,7 @@ go_term = c()
 sapply(normal_mRNA_topGo_common_miRNAs, function(df){
   go_term <<- append(go_term, df$GO.ID)
 })
+
 Term(go_term[duplicated(go_term)])
 
 tumor_mRNA_topGo_common_miRNAs = list()
@@ -105,6 +103,21 @@ for (i in 1:length(normal_mRNA_list)){
   tumor_mRNA_topGo_common_miRNAs = list.append(tumor_mRNA_topGo_common_miRNAs, result)
 }
 names(tumor_mRNA_topGo_common_miRNAs) = names(tumor_mRNA_list)
+
+##########################################################################################
+#### GOTerm enrichment analysis on all on mRNA group based on connection with lncRNA
+##########################################################################################
+
+normal_mRNA_connected_lncRNA_list = get_mRNAs_connected_to_lncRNA(normal_encRNA_graph,names(normal_lncRNA_degree))
+tumor_mRNA_connected_lncRNA_list = get_mRNAs_connected_to_lncRNA(tumor_encRNA_graph,names(tumor_lncRNA_degree))
+
+normal_encRNA_mRNA_list = get_mRNAs_in_Ensembl(geneList = normal_mRNA_connected_lncRNA_list,
+                                               ensemble = all_ensembl_gene_symbols, 
+                                               minimumSize = 10)
+tumor_encRNA_mRNA_list = get_mRNAs_in_Ensembl(geneList = normal_mRNA_connected_lncRNA_list,
+                                               ensemble = all_ensembl_gene_symbols, 
+                                               minimumSize = 10)
+
 
 ##########################################################################################
 #### GOTerm enrichment analysis on all on miRNAs

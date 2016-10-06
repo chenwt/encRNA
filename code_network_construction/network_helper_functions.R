@@ -82,7 +82,7 @@ get_TopGo_result = function(all_ensembl_gene_symbols, gene_list, topNodes){
                ontology="MF",
                allGenes=universe,
                annot=annFUN.org,
-               mapping="org.Hs.eg.db", 
+               mapping="org.Hs.eg.db",
                ID="symbol")
   
   #fischer

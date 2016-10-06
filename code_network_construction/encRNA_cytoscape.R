@@ -53,7 +53,6 @@ RCy3::setNodeAttributesDirect(cytoscape_window, 'color', 'char',
                               igraph::V(graph_encRNA)$name, 
                               igraph::V(graph_encRNA)$color)
 
-
 edge_names = names(RCy3::cy2.edge.names (cytoscape_window@graph))
 
 # test$pair = as.factor(test$pair)
@@ -82,7 +81,7 @@ hlp <-RCy3::getLayoutNames(cy)
 RCy3::setLayoutProperties (cytoscape_window, hlp[10], list (gravity_multiplier = 'similarity', nIterations = 1))
 RCy3::layoutNetwork(cytoscape_window, hlp[10])
 
-RCy3::setDefaultNodeSize(cytoscape_window, 300)
+RCy3::setDefaultNodeSize(cytoscape_window, 50)
 RCy3::setDefaultNodeFontSize(cytoscape_window, 60)
 
 
@@ -129,7 +128,6 @@ RCy3::setNodeAttributesDirect(cytoscape_window2, 'color', 'char',
                               igraph::V(graph_encRNA)$name, 
                               igraph::V(graph_encRNA)$color)
 
-
 edge_names = names(RCy3::cy2.edge.names (cytoscape_window2@graph))
 
 # test$pair = as.factor(test$pair)
@@ -158,8 +156,8 @@ hlp <-RCy3::getLayoutNames(cy)
 RCy3::setLayoutProperties (cytoscape_window2, hlp[10], list (gravity_multiplier = 'similarity', nIterations = 1))
 RCy3::layoutNetwork(cytoscape_window2, hlp[10])
 
-RCy3::setDefaultNodeSize(cytoscape_window2, 5000)
-RCy3::setDefaultNodeFontSize(cytoscape_window2, 500)
+RCy3::setDefaultNodeSize(cytoscape_window2, 20)
+RCy3::setDefaultNodeFontSize(cytoscape_window2, 20)
 
 
 
