@@ -1,8 +1,9 @@
 #########################################################
 ## ------ perform survival analysis----------------------
-setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
-source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
-source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_network_construction/network_helper_functions.R")
+
+setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+source("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
+source("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_network_construction/network_helper_functions.R")
 load("brca2_TCGA2STAT.rda")
 load("data_Saved_R_Objects/brca_df.rda")
 load("data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
@@ -97,7 +98,7 @@ sum(is.na(clinical_df$time)) # 0 --> good!
 ## ------- start Suvival anlysis --------------------------------------------------
 
 # create Survival object
-
+require(survival)
 # plot the Kaplan-Meier curve between two high-risk and low-risk group
 clinical_df$SurvObj <- with(clinical_df, Surv(time, vitalstatus == 1))
 save(clinical_df, file = "data_Saved_R_Objects/clinical_df.rda")
@@ -140,11 +141,18 @@ length(intersect(sample_names, clinical_new$V2))
 ##########################################################################################
 ### univariate cox propotional hazard model based on those lncRNA and mRNA
 ##########################################################################################
+
+load("data_Saved_R_Objects/brca_df.rda")
+load("data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
+
 # select all mRNAs and lncRNA from normal and tumor encRNA triplet
 normal_mRNAs = unique(normal_encRNA_sensitivity_bound_goodCoor$mRNA)
 normal_lncRNAs = unique(normal_encRNA_sensitivity_bound_goodCoor$lncRNA)
 tumor_mRNAs = unique(tumor_encRNA_sensitivity_bound_goodCoor$mRNA); tumor_mRNAs = tumor_mRNAs[-241]
 tumor_lncRNAs = unique(tumor_encRNA_sensitivity_bound_goodCoor$lncRNA)
+
+load("data_Saved_R_Objects/clinical_df.rda")
+sample_names = rownames(clinical_df)
 
 require(survival)
 # add expression data into the clinical matrix
@@ -152,44 +160,33 @@ load("data_Saved_R_Objects/clinical_df.rda")
 normal_mRNAs_clinical_expression_df = cbind(clinical_df, t(brca_mRNA_df[normal_mRNAs,sample_names]))
 normal_mRNAs_cox = get_survival_stat(clinical_expression_df = normal_mRNAs_clinical_expression_df,
                          RNA = normal_mRNAs)
-normal_mRNAs_risk_cox = get_survival_with_risk_stat(clinical_expression_df = normal_mRNAs_clinical_expression_df,
-                                     RNA = normal_mRNAs)
-length(which(normal_mRNAs_cox$pvalue_hazard_ratio < 0.05)) # 22
-length(which(normal_mRNAs_risk_cox$pvalue_hazard_ratio < 0.05)) # 21
 
+length(which(normal_mRNAs_cox$pvalue_hazard_ratio < 0.05)) # 22
 
 load("data_Saved_R_Objects/clinical_df.rda")
 normal_lncRNAs_clinical_expression_df = cbind(clinical_df, t(brca_lncRNA_df[normal_lncRNAs,sample_names]))
 normal_lncRNAs_cox = get_survival_stat(clinical_expression_df = normal_lncRNAs_clinical_expression_df,
                                      RNA = normal_lncRNAs)
-normal_lncRNAs_risk_cox = get_survival_with_risk_stat(clinical_expression_df = normal_lncRNAs_clinical_expression_df,
-                                       RNA = normal_lncRNAs)
 length(which(normal_lncRNAs_cox$pvalue_hazard_ratio < 0.05)) # 3
-length(which(normal_lncRNAs_risk_cox$pvalue_hazard_ratio < 0.05)) # 2
 
 load("data_Saved_R_Objects/clinical_df.rda")
 tumor_mRNAs_clinical_expression_df = cbind(clinical_df, t(brca_mRNA_df[tumor_mRNAs,sample_names]))
 tumor_mRNAs_cox = get_survival_stat(clinical_expression_df = tumor_mRNAs_clinical_expression_df,
                                      RNA = tumor_mRNAs)
-tumor_mRNAs_risk_cox = get_survival_with_risk_stat(clinical_expression_df = tumor_mRNAs_clinical_expression_df,
-                                    RNA = tumor_mRNAs)
-length(which(tumor_mRNAs_cox$pvalue_hazard_ratio < 0.05)) # 44
-length(which(tumor_mRNAs_risk_cox$pvalue_hazard_ratio < 0.05)) # 63
+length(which(tumor_mRNAs_cox$pvalue_hazard_ratio < 0.05)) # 59
 
 
 load("data_Saved_R_Objects/clinical_df.rda")
 tumor_lncRNAs_clinical_expression_df = cbind(clinical_df, t(brca_lncRNA_df[tumor_lncRNAs,sample_names]))
 tumor_lncRNAs_cox = get_survival_stat(clinical_expression_df = tumor_lncRNAs_clinical_expression_df,
                                        RNA = tumor_lncRNAs)
-tumor_lncRNAs_risk_cox = get_survival_with_risk_stat(clinical_expression_df = tumor_lncRNAs_clinical_expression_df,
-                                      RNA = tumor_lncRNAs)
 length(which(tumor_lncRNAs_cox$pvalue_hazard_ratio < 0.05)) # 26
-length(which(tumor_lncRNAs_risk_cox$pvalue_hazard_ratio < 0.05)) # 33
+
 
 ##########################################################################################
 ### check relation between hazard ratio and its p-value
 ##########################################################################################
-
+require(ggplot2)
 df1 = data.frame(hazard_ratio = normal_mRNAs_cox$hazard_ratio, 
                 p_value = normal_mRNAs_cox$pvalue_hazard_ratio)
 
@@ -214,20 +211,92 @@ gridExtra::grid.arrange(p1,p2,p3,p4,ncol = 2)
 ### plotting hazard ratio vs p-value 
 ##########################################################################################
 
-mRNA_normal_hazard_ratio <- data.frame(group = "mRNA_normal_hazard_ratio", 
+mRNA_normal_hazard_ratio <- data.frame(group = "mRNA - normal", 
                                        value = normal_mRNAs_cox$hazard_ratio)
-lncRNA_normal_hazard_ratio <- data.frame(group = "lncRNA_normal_hazard_ratio", 
+lncRNA_normal_hazard_ratio <- data.frame(group = "lncRNA - normal", 
                                          value = normal_lncRNAs_cox$hazard_ratio)
-mRNA_tumor_hazard_ratio <- data.frame(group = "mRNA_tumor_hazard_ratio", 
+mRNA_tumor_hazard_ratio <- data.frame(group = "mRNA - tumor", 
                                       value = tumor_mRNAs_cox$hazard_ratio)
-lncRNA_tumor_hazard_ratio <- data.frame(group = "lncRNA_tumor_hazard_ratio",
+lncRNA_tumor_hazard_ratio <- data.frame(group = "lncRNA - tumor",
                                         value = tumor_lncRNAs_cox$hazard_ratio)
 
 plot.data = rbind(mRNA_normal_hazard_ratio, lncRNA_normal_hazard_ratio, 
                   mRNA_tumor_hazard_ratio, lncRNA_tumor_hazard_ratio)
 
-ggplot(plot.data, aes(x=group, y=value, fill=group)) +  geom_violin()
-ggplot(plot.data, aes(x=group, y=value, fill=group)) +  geom_boxplot()
+ggplot(plot.data, aes(x=group, y=value, fill=group)) + geom_violin() + 
+  xlab("mRNA and lncRNA in 2 conditions") + ylab("Hazard ratio") +
+  labs(title = "Hazard ratio of mRNAs and lncRNA in normal and tumor groups") +
+  theme(legend.position = "none")
+ggplot(plot.data, aes(x=group, y=value, fill=group)) +  geom_boxplot() + 
+  xlab("Groups") + ylab("Hazard ratio") +
+  labs(title = "Hazard ratio of mRNAs and lncRNA in normal and tumor groups") +
+  theme(legend.position = "none")
+
+##########################################################################################
+### test prognostic power of those hazard mRNA and lncRNA
+##########################################################################################
+# top_high_normal_mRNA = names(sort(normal_mRNAs_cox$hazard_ratio, decreasing = T)[1:5])
+# top_high_normal_lncRNA = names(sort(normal_lncRNAs_cox$hazard_ratio, decreasing = T)[1:5])
+# top_high_tumor_mRNA = names(sort(tumor_mRNAs_cox$hazard_ratio, decreasing = T)[1:5])
+# top_high_tumor_lncRNA = names(sort(tumor_lncRNAs_cox$hazard_ratio, decreasing = T)[1:5])
+
+top_high_normal_mRNA = names(which(normal_mRNAs_cox$hazard_ratio > 1.5))
+top_high_normal_lncRNA = names(which(normal_lncRNAs_cox$hazard_ratio > 1.5))
+top_high_tumor_mRNA = names(which(tumor_mRNAs_cox$hazard_ratio > 1.5))
+top_high_tumor_lncRNA = names(which(tumor_lncRNAs_cox$hazard_ratio > 1.5))
+
+
+
+load("data_Saved_R_Objects/clinical_df.rda")
+sample_names = rownames(clinical_df)
+mRNAs_clinical_expression_df = cbind(clinical_df, t(brca_mRNA_df[top_high_normal_mRNA,sample_names]))
+lncRNAs_clinical_expression_df = cbind(clinical_df, t(brca_lncRNA_df[top_high_tumor_lncRNA,sample_names]))
+
+p_values = c()
+for (i in 8:ncol(mRNAs_clinical_expression_df)){
+  mRNAs_clinical_expression_df$risk_level[which(mRNAs_clinical_expression_df[,i] > median(mRNAs_clinical_expression_df[,i]))] = "group 1"
+  mRNAs_clinical_expression_df$risk_level[which(mRNAs_clinical_expression_df[,i] <= median(mRNAs_clinical_expression_df[,i]))] = "group 2"
+  surv_diff = survdiff(formula = mRNAs_clinical_expression_df$SurvObj ~ mRNAs_clinical_expression_df$risk_level)
+  p_value = 1 - pchisq(surv_diff$chisq, length(surv_diff$n) - 1)
+  p_values = append(p_values, p_value)
+}
+which(p_values < 0.05)
+
+p_values = c()
+for (i in 8:ncol(lncRNAs_clinical_expression_df)){
+  lncRNAs_clinical_expression_df$risk_level[which(lncRNAs_clinical_expression_df[,i] > median(lncRNAs_clinical_expression_df[,i]))] = "group 1"
+  lncRNAs_clinical_expression_df$risk_level[which(lncRNAs_clinical_expression_df[,i] <= median(lncRNAs_clinical_expression_df[,i]))] = "group 2"
+  surv_diff = survdiff(formula = lncRNAs_clinical_expression_df$SurvObj ~ lncRNAs_clinical_expression_df$risk_level)
+  p_value = 1 - pchisq(surv_diff$chisq, length(surv_diff$n) - 1)
+  p_values = append(p_values, p_value)
+}
+names(p_values) = colnames(lncRNAs_clinical_expression_df)[8:ncol(lncRNAs_clinical_expression_df)] 
+which(p_values < 0.05) # 7, 12
+
+par(mfrow = c(1,2))
+a1 = lncRNAs_clinical_expression_df
+a1$risk_level[which(a1[,'ENSG00000226637.1'] > median(a1[,'ENSG00000226637.1']))] = "group 1"
+a1$risk_level[which(a1[,'ENSG00000226637.1'] <= median(a1[,'ENSG00000226637.1']))] = "group 2"
+fit <- survfit(a1$SurvObj ~ a1$risk_level)
+plot(fit, mark.time = T,  col = c("red","blue"),
+     xlab = "Days",ylab = "Survival Proability",
+     main = "ENSG00000226637.1 (p log_rank = 0.0014)")
+legend(x = "topright", c("lower-risk","higher-risk"), lty=c(1,1), col = c("blue","red"))
+
+a2 = lncRNAs_clinical_expression_df
+
+lncRNAs_clinical_expression_df$risk[which(lncRNAs_clinical_expression_df[,'ENSG00000258929.2'] > median(lncRNAs_clinical_expression_df[,'ENSG00000258929.2']))] = "group 1"
+lncRNAs_clinical_expression_df$risk[which(lncRNAs_clinical_expression_df[,'ENSG00000258929.2'] <= median(lncRNAs_clinical_expression_df[,'ENSG00000258929.2']))] = "group 2"
+fit2 <- survfit(mRNAs_clinical_expression_df$SurvObj ~ mRNAs_clinical_expression_df$risk)
+plot(fit2, mark.time = T,  col = c("red","blue"),
+     xlab = "Days",ylab = "Survival Proability",
+     main = "ENSG00000258929.2 (p log_rank = 0.0058)")
+legend(x = "topright", c("lower-risk","higher-risk"), lty=c(1,1), col = c("blue","red"))
+
+d1 = tumor_encRNA_sensitivity_bound_goodCoor[which(tumor_encRNA_sensitivity_bound_goodCoor$lncRNA %in% top_high_tumor_lncRNA),]
+
+intersect(d1$mRNA, top_high_tumor_mRNA)
+tumor_mRNAs_cox$hazard_ratio[d1$mRNA]
 
 ##########################################################################################
 ### plotting hazard ratio vs p-value (pvalue cut-off at 0.05)
@@ -248,6 +317,14 @@ plot.data = rbind(mRNA_normal_hazard_ratio, lncRNA_normal_hazard_ratio,
 
 ggplot(plot.data, aes(x=group, y=value, fill=group)) +  geom_violin()
 ggplot(plot.data, aes(x=group, y=value, fill=group)) +  geom_boxplot()
+
+
+#############################################################################
+## check if any mRNA-lncRNA pairs both having high hazard ratio            ##  
+#############################################################################
+
+
+
 
 
 ###########################################################################################################33

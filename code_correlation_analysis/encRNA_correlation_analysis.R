@@ -1,5 +1,5 @@
-setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
-source("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
+setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+source("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/code_correlation_analysis/helper_functions.R")
 
 load("data_Saved_R_Objects/brca_df.rda")
 # load("Saved_R_Objects/corr_matrices/corr_matrices.rda")
@@ -96,15 +96,64 @@ normal_bicor_lncRNA_mRNA = result
 save(normal_bicor_lncRNA_mRNA, normal_bicor_miRNA_lncRNA, file = "data_Saved_R_Objects/corr_matrices/bicor.rda")
 
 # ------------------- Visualization ----------------------------------------------------
+require(ggplot2)
+
+tumor_corr <- data.frame(group = "tumor", 
+                         value = as.vector(tumor_lncRNA_mRNA_corr_matrix))
+normal_corr <- data.frame(group = "normal", 
+                         value = as.vector(normal_lncRNA_mRNA_corr_matrix))
+plot.data = rbind(tumor_corr, normal_corr)
+
+#save(plot.data, file = "plot.data.rda")
+
+load("plot.data.rda")
+
+normal_99quantile = 0.710914
+tumor_99quantile = 0.3476711
+ggplot(plot.data, aes(x=value, fill = group)) +  geom_density(alpha = 0.4) + 
+  scale_fill_manual(values=c("red", "darkgreen")) +
+  labs(title = "Correlation of all mRNA-lncRNA pairs") + 
+  xlab(label = "Correlation") + 
+  geom_vline(data=plot.data, xintercept = tumor_99quantile, linetype="dashed", color = "red") + 
+  geom_vline(data=plot.data, xintercept = normal_99quantile, linetype="dashed", color = "darkgreen") + 
+  theme(legend.position = c(0.1,0.85))
+
 
 # plot density of all R between lncRNA and mRNA
-plot(density(tumor_lncRNA_mRNA_corr_matrix), 
-     col = "red", lwd = 3, ylim = c(0,4), 
-     main = "mRNA - lncRNA correlation (normal and tumor)")
-lines(density(normal_lncRNA_mRNA_corr_matrix), col = "green", lwd = 3)
+tumor_vector = density(plot.data[which(plot.data$group == "tumor"),2])
+normal_vector = density(plot.data[which(plot.data$group == "normal"),2])
+ 
+# plot(density(plot.data[which(plot.data$group == "tumor"),2]), 
+#      col = "red", lwd = 3, ylim = c(0,4), xlab = "Correlation",
+#      main = "Correlation of all mRNA-lncRNA pairs")
+# abline(v = tumor_99quantile,col = "red")
+# lines(density(plot.data[which(plot.data$group == "normal"),2]), 
+#       col = "forestgreen", lwd = 3)
+# abline(v = normal_99quantile,col = "darkgreen")
+# legend(x = 'topright', pch = 15,
+#        col = c("darkgreen","red"),
+#        legend = c("normal", "tumor"))
+
+plot(tumor_vector$x, scale(tumor_vector$y), type = "l", 
+     col = "red", lwd = 3, 
+     xlab = "Correlation",ylab = "Normalised density",
+     main = "Correlation of all mRNA-lncRNA pairs",
+     axes = F,
+     frame.plot = T)
+abline(v = tumor_99quantile,col = "red")
+lines(normal_vector$x, scale(normal_vector$y),type = "l", 
+      col = "forestgreen", lwd = 3)
+abline(v = normal_99quantile,col = "darkgreen")
 legend(x = 'topright', pch = 15,
-       col = c("green","red"),
+       col = c("darkgreen","red"),
        legend = c("normal", "tumor"))
+axis(side = 1, at = seq(-1,1,0.2))
+axis(side = 2, at = seq(0,1,0.5))
+
+# max-min function
+scale = function(v){
+  return((v-min(v))/(max(v)-min(v)))
+}
 
 
 
@@ -124,16 +173,35 @@ tumor_lncRNA_mRNA_pairs = get_lncRNA_mRNA_pairs(tumor_lncRNA_mRNA_corr_matrix,
 dim(tumor_lncRNA_mRNA_pairs)
 save(normal_lncRNA_mRNA_pairs, tumor_lncRNA_mRNA_pairs, file = "data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
 
-# density of top 1% mRNA - lncRNA correlation
-plot(density(tumor_lncRNA_mRNA_pairs$corr), 
-     col = "red", lwd = 3, ylim = c(0,16), 
-     xlab = "Correlations from top 850,356 lncRNA-mRNA pairs",
-     main = "Top 1% mRNA - lncRNA correlation (normal and tumor)")
-lines(density(normal_lncRNA_mRNA_pairs$corr), col = "green", lwd = 3)
+load("data_Saved_R_Objects/corr_matrices/normal_tumor_lncRNA_mRNA_pairs.rda")
 
+tumor_vector2 = density(tumor_lncRNA_mRNA_pairs$corr)
+normal_vector2 = density(normal_lncRNA_mRNA_pairs$corr)
+
+# # density of top 1% mRNA - lncRNA correlation
+# plot(density(tumor_lncRNA_mRNA_pairs$corr), 
+#      col = "red", lwd = 3, ylim = c(0,16), 
+#      xlab = "Correlations from top 850,356 lncRNA-mRNA pairs",
+#      main = "Top 1% mRNA - lncRNA correlation (normal and tumor)")
+# lines(density(normal_lncRNA_mRNA_pairs$corr), col = "green", lwd = 3)
+# 
+# legend(x = 'topright', pch = 15,
+#        col = c("green","red"),
+#        legend = c("normal (cut-off = 0.71)", "tumor (cut-off = 0.35)"))
+
+plot(tumor_vector2$x, scale(tumor_vector2$y), type = "l", 
+     col = "red", lwd = 3, 
+     xlab = "Correlation",ylab = "Normalised density",
+     main = "Correlation of all mRNA-lncRNA pairs",
+     axes = F,
+     frame.plot = T)
+lines(normal_vector2$x, scale(normal_vector2$y),type = "l", 
+      col = "forestgreen", lwd = 3)
 legend(x = 'topright', pch = 15,
-       col = c("green","red"),
-       legend = c("normal (cut-off = 0.71)", "tumor (cut-off = 0.35)"))
+       col = c("darkgreen","red"),
+       legend = c("normal", "tumor"))
+axis(side = 1, at = seq(-1,1,0.1))
+axis(side = 2, at = seq(0,1,0.5))
 
 
 # -------- check overlap between normal and tumor lncRNA - mRNA pair ---------------------
