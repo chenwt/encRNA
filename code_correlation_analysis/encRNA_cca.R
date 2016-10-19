@@ -38,39 +38,27 @@ source("get_normal_tumor_expression_matrices.R")
 
 ######## -------------- Compute Sparse CCA -----------------------------------------------------------
 
+### from all normal and all tumor
 require(PMA)
 load("data_Saved_R_Objects/cca/mRNA_lncRNA_normal_cca.rda")
 load("data_Saved_R_Objects/cca/mRNA_lncRNA_tumor_cca.rda")
-gc()
-mRNA_lncRNA_normal_perm_out <- CCA.permute(x = t(mRNA_normal),
-                        z = t(lncRNA_normal),
-                        typex="standard",
-                        typez="standard",
-                        nperms=100)
-normal_out <- CCA(x = t(mRNA_normal),
-                  z = t(lncRNA_normal), 
-                  typex = "standard", 
-                  typez = "standard",
-                  penaltyx = mRNA_lncRNA_normal_perm_out$bestpenaltyx,
-                  penaltyz = mRNA_lncRNA_normal_perm_out$bestpenaltyz,
-                  v = mRNA_lncRNA_normal_perm_out$v.init,
-                  K = 1) 
-save(mRNA_lncRNA_normal_perm_out, normal_out, file = "data_Saved_R_Objects/cca/mRNA_lncRNA_normal_cca.rda")
-gc()
-mRNA_lncRNA_tumor_perm_out <- CCA.permute(x = t(mRNA_tumor),
-                                           z = t(lncRNA_tumor),
-                                           typex="standard",
-                                           typez="standard",
-                                           nperms=100)
-tumor_out <- CCA(x = t(mRNA_normal),
-                  z = t(lncRNA_normal), 
-                  typex = "standard", 
-                  typez = "standard",
-                  penaltyx = mRNA_lncRNA_tumor_perm_out$bestpenaltyx,
-                  penaltyz = mRNA_lncRNA_tumor_perm_out$bestpenaltyz,
-                  v = mRNA_lncRNA_tumor_perm_out$v.init,
-                  K = 1) 
-save(mRNA_lncRNA_tumor_perm_out,tumor_out, file = "data_Saved_R_Objects/cca/mRNA_lncRNA_tumor_cca.rda")
+
+mRNA_lncRNA_normal_scca = get_scca_result(x = t(mRNA_normal), z = t(lncRNA_normal), nperms = 100)
+mRNA_lncRNA_normal_perm_out = mRNA_lncRNA_normal_scca$perm
+normal_out = mRNA_lncRNA_normal_scca$out
+
+mRNA_lncRNA_tumor_scca = get_scca_result(x = t(mRNA_tumor), z = t(lncRNA_tumor), nperms = 100)
+mRNA_lncRNA_tumor_perm_out = mRNA_lncRNA_tumor_scca$perm
+tumor_out = mRNA_lncRNA_tumor_scca$out
+
+### from matched normal_tumor
+load("data_Saved_R_Objects/brca_expression_matched.rda")
+source("get_normal_tumor_expression_matrices.R")
+mRNA_lncRNA_normal_matched_scca = get_scca_result(x = t(mRNA_normal_matched), 
+                                                  z = t(lncRNA_normal_matched), 
+                                                  nperms = 100)
+save(mRNA_lncRNA_normal_matched_scca, 
+     file = "data_Saved_R_Objects/cca/mRNA_lncRNA_normal_matched_scca.rda")
 
 ######## -------------- Analyze Sparse CCA -----------------------------------------------------------
 setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
@@ -78,9 +66,35 @@ source("get_normal_tumor_expression_matrices.R")
 load("data_Saved_R_Objects/cca/mRNA_lncRNA_normal_cca.rda")
 load("data_Saved_R_Objects/cca/mRNA_lncRNA_tumor_cca.rda")
 
+#### how many mRNAs and lncRNAs are kept 
+# normal
+length(which(normal_out$u != 0)) # mRNAs: 9,251 out of 17,613
+length(which(normal_out$v != 0)) # lncRNAs: 2720 out of 4,828  
+# tumor
+length(which(tumor_out$u != 0)) # mRNAs: 723 out of 17,613
+length(which(tumor_out$v != 0)) # lncRNAs: 195 out of 4,828  
 
 
+######## -------------- Sparse CCA function -----------------------------------------------------------
 
+get_scca_result = function(x, z, nperms = 100){
+  require(PMA)
+  perm_out <- CCA.permute(x = x,
+                          z = z,
+                          typex = "standard",
+                          typez = "standard",
+                          nperms = nperms)
+  out <- CCA(x = x,
+             z = z, 
+             typex = "standard", 
+             typez = "standard",
+             penaltyx = perm_out$bestpenaltyx,
+             penaltyz = perm_out$bestpenaltyz,
+             v = perm_out$v.init,
+             K = 1)
+  l = list(perm = perm_out, out = out)
+  return(l)
+}
 
 
 

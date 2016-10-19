@@ -11,3 +11,13 @@ lncRNA_normal = brca_lncRNA_df[,normal_indices];
 mRNA_tumor = brca_mRNA_df[,tumor_indices];
 miRNA_tumor = brca_miRNA_df[,tumor_indices];
 lncRNA_tumor = brca_lncRNA_df[,tumor_indices]
+
+load("data_Saved_R_Objects/brca_expression_matched.rda")
+
+mRNA_normal_matched = brca_mRNA_matched[,1:76];
+miRNA_normal_matched = brca_miRNA_matched[,1:76];
+lncRNA_normal_matched = brca_lncRNA_matched[,1:76];
+
+mRNA_tumor_matched = brca_mRNA_matched[,77:152];
+miRNA_tumor_matched = brca_miRNA_matched[,77:152];
+lncRNA_tumor_matched = brca_lncRNA_matched[,77:152]

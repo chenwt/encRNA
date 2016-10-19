@@ -16,9 +16,10 @@ colnames(brca_lncRNA_common)[1:10]
 rm(list = ls()); gc()
 
 # set directory
-setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 load("brca2_TCGA2STAT.rda")
 require(TCGA2STAT)
+
 ## --------------- SAMPLE MATCHING ---------------------------------------
 
 ### mRNA ########
@@ -56,7 +57,7 @@ brca_miRNA_tumor_samples_v2 =  strsplit(brca_miRNA_tumor_samples, split = "[-]")
 brca_miRNA_tumor_samples_v2 = unlist(lapply(brca_miRNA_tumor_samples_v2, function(name) paste("BRCA","Tumor",name[1],name[2],name[3],sep=".")))
 
 #### load lncRNA data ########
-brca_lncRNA_df = read.csv(file = "lncRNA_Tanric_062616.csv", header = TRUE)
+brca_lncRNA_df = read.csv(file = "data_expression_files/lncRNA_Tanric_062616.csv", header = TRUE)
 rownames(brca_lncRNA_df) = brca_lncRNA_df[,1]
 brca_lncRNA_df = brca_lncRNA_df[,-1]
 dim(brca_lncRNA_df) # [1] 12727   942
@@ -76,6 +77,7 @@ length(intersect(intersect(brca_mRNA_tumor_samples_v2,brca_miRNA_tumor_samples_v
 # thus, accross all mRNA, miRNA, lnRNA, there are common 79 normal and common 457 samples
 brca_normal_common_samples = intersect(intersect(brca_mRNA_normal_samples_v2,brca_miRNA_normal_samples_v2), brca_lncRNA_normal_samples)
 brca_tumor_common_samples = intersect(intersect(brca_mRNA_tumor_samples_v2,brca_miRNA_tumor_samples_v2), brca_lncRNA_tumor_samples)
+length(brca_normal_common_samples); length(brca_tumor_common_samples)
 
 #### subset lncRNA
 brca_lncRNA_common = brca_lncRNA_df[,which(colnames(brca_lncRNA_df) %in% c(brca_normal_common_samples,brca_tumor_common_samples))]
@@ -103,6 +105,29 @@ brca_miRNA_common = brca_miRNA$dat[,c(brca_miRNA_normal_samples, brca_miRNA_tumo
 colnames(brca_miRNA_common) = c(brca_miRNA_normal_samples_v2, brca_miRNA_tumor_samples_v2)
 brca_miRNA_common = brca_miRNA_common[,colnames(brca_lncRNA_common)]
 
+### check matched normal-tumor
+
+length(intersect(intersect(colnames(brca_mRNA_common),colnames(brca_lncRNA_common)), colnames(brca_miRNA_common)))
+normal_samples = colnames(brca_mRNA_common)[1:79]; normal_samples = substr(normal_samples, 13, 25)
+tumor_samples = colnames(brca_mRNA_common)[80:536]; tumor_samples = substr(tumor_samples, 12, 24)
+length(intersect(normal_samples, tumor_samples))
+
+load("data_Saved_R_Objects/brca_df.rda")
+length(intersect(intersect(colnames(brca_mRNA_df),colnames(brca_lncRNA_df)), colnames(brca_miRNA_df)))
+normal_samples = colnames(brca_mRNA_df)[1:79]; normal_samples = substr(normal_samples, 13, 25)
+tumor_samples = colnames(brca_mRNA_df)[80:536]; tumor_samples = substr(tumor_samples, 12, 24)
+length(intersect(normal_samples, tumor_samples))
+
+common_name_core = intersect(normal_samples, tumor_samples) 
+normal_samples = paste("BRCA.Normal.", common_name_core, sep = "")
+tumor_samples = paste("BRCA.Tumor.", common_name_core, sep = "")
+sample_names = c(normal_samples, tumor_samples)
+
+brca_mRNA_matched = brca_mRNA_df[,sample_names]; dim(brca_mRNA_matched)
+brca_miRNA_matched = brca_miRNA_df[,sample_names]; dim(brca_miRNA_matched)
+brca_lncRNA_matched = brca_lncRNA_df[,sample_names]; dim(brca_lncRNA_matched)
+
+save(brca_mRNA_matched,brca_miRNA_matched,brca_lncRNA_matched,file = "data_Saved_R_Objects/brca_expression_matched.rda")
 
 # check dimension matching
 dim(brca_mRNA_common) # 20502   536
