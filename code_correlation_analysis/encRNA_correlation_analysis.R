@@ -134,21 +134,23 @@ normal_vector = density(plot.data[which(plot.data$group == "normal"),2])
 #        col = c("darkgreen","red"),
 #        legend = c("normal", "tumor"))
 
-plot(tumor_vector$x, scale(tumor_vector$y), type = "l", 
+normal_99quantile = 0.710914
+tumor_99quantile = 0.3476711
+plot(tumor_vector$x, tumor_vector$y, type = "l", 
      col = "red", lwd = 3, 
-     xlab = "Correlation",ylab = "Normalised density",
+     xlab = "Correlation",ylab = "Density",
      main = "Correlation of all mRNA-lncRNA pairs",
      axes = F,
      frame.plot = T)
 abline(v = tumor_99quantile,col = "red")
-lines(normal_vector$x, scale(normal_vector$y),type = "l", 
+lines(normal_vector$x, normal_vector$y,type = "l", 
       col = "forestgreen", lwd = 3)
 abline(v = normal_99quantile,col = "darkgreen")
 legend(x = 'topright', pch = 15,
        col = c("darkgreen","red"),
        legend = c("normal", "tumor"))
 axis(side = 1, at = seq(-1,1,0.2))
-axis(side = 2, at = seq(0,1,0.5))
+axis(side = 2, at = seq(0,4,1))
 
 # max-min function
 scale = function(v){
@@ -367,25 +369,30 @@ length(intersect(unique(normal_encRNA$encRNA_triple), unique(tumor_encRNA$encRNA
 
 # plot the sensitivity matrix
 # plot density of all sensitivity values (291,672,108 data points)
-plot(density(as.vector(normal_sensitivity_full)), 
-     col = "green", lwd = 3, ylim = c(0,160), 
-     main = "Sensitivity correlations from 850,356 encRNA pairs vs 343 miRNAs")
-lines(density(as.vector(tumor_sensitivity_full)), col = "red", lwd = 3)
-legend(x = 'topright', pch = 15,
-       col = c("green","red"),
-       legend = c("normal", "tumor"))
 
+# load("data_Saved_R_Objects/corr_matrices/normal_sensitivity_full.rda")
+# load("data_Saved_R_Objects/corr_matrices/tumor_sensivitivity_full.rda")
+# 
+# tumor_corr <- density(as.vector(tumor_sensitivity_full))
+# normal_corr <- density(as.vector(normal_sensitivity_full))
+
+load("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/data_Saved_R_Objects/corr_matrices/normal_sen_corr_density.rda")
+load("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616/data_Saved_R_Objects/corr_matrices/tumor_sen_corr_density.rda")
+
+normal_99quantile = 0.2454465
+tumor_99quantile = 0.08703023
 # for the top 1% sensitivity cut-off, plot all the remaining sensitivity
-plot(density(normal_encRNA$sensitivity), 
-     main = "Sensivity correlation of top 1% of 850,356 encRNA pairs vs 343 miRNAs",
-     xlab = "Sensivity correlation of 2,916,723 encRNAs-miRNA pairs",
-     xlim = c(0,1),
-     ylim = c(0,31),
-     col = "green", lwd = 3)
-lines(density(tumor_encRNA$sensitivity), 
-      col = "red", lwd = 3)
+plot(normal_corr$x, normal_corr$y,
+     type  = "l",col = "forestgreen", lwd = 2, frame.plot = T, axes = T,
+     xlim = c(-0.3,1),ylim = c(0,420), main = "Sensitivity correlation of selected mRNA-lncRNA pairs vs miRNAs",
+     xlab = "Sensivity correlation", ylab = "Density")
+
+lines(tumor_corr$x, tumor_corr$y,type = "l",
+      col = "red", lwd = 2)
+abline(v = tumor_99quantile,col = "red")
+abline(v = normal_99quantile,col = "forestgreen")
 legend(x = 'topright', pch = 15,
-       col = c("red","green"),
+       col = c("red","forestgreen"),
        legend = c("tumor", "normal"))
 
 

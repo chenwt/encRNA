@@ -1,5 +1,5 @@
 # -------------- Basic setup ---------------------------------------------------------------------
-setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 load("brca_mutation.rda")
 load("Saved_R_Objects/brca_common_objects3.rda")
 require(TCGA2STAT)

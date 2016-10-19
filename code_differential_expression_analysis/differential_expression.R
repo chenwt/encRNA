@@ -1,5 +1,5 @@
-setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
-load("Saved_R_Objects/brca_df.rda")
+setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+load("data_Saved_R_Objects/brca_df.rda")
 require(limma)
 
 # create status object 
@@ -44,7 +44,7 @@ sum(brca_mRNA_limma_all_subset$logFC > 0) # 7039 lncRNA genes are up-regulated
 
 de_brca_mRNA_df = brca_mRNA_df[rownames(brca_mRNA_limma_all_subset),]
 
-## ------------- DEA on miRNA ---------------------------------------------------------------------------
+## ------------- DEA on miRNA --------------------------------------------------------#-------------------
 
 dim(brca_miRNA_df) # [1] 343 536
 
@@ -67,6 +67,20 @@ de_brca_miRNA_df = brca_miRNA_df[rownames(brca_miRNA_limma_all_subset),]
 save(brca_lncRNA_limma_all, brca_mRNA_limma_all_subset, brca_miRNA_limma_all_subset,
      de_brca_lncRNA_df, de_brca_mRNA_df, de_brca_miRNA_df,
      file = "Saved_R_Objects/differential_analysis/de_lncRNA_mRNA_miRNA.rda")
+
+##############
+
+load("data_Saved_R_Objects/differential_analysis/de_lncRNA_mRNA_miRNA.rda")
+head(brca_miRNA_limma_all_subset)
+
+"hsa-mir-22" %in% rownames(brca_miRNA_limma_all_subset) # true
+
+brca_miRNA_limma_all_subset["hsa-mir-22",]
+
+
+
+
+
 
 
 

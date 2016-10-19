@@ -33,110 +33,110 @@ get_survival_with_risk_stat = function(clinical_expression_df, RNA){
   return(list(hazard_ratio = hazard_ratio, pvalue_hazard_ratio = pvalue_hazard_ratio))
 }
 
-## ------- sample name manipulation ----------------------------------------------
-clinical_df = brca_miRNA$clinical
-
-## select sample names also showed up in filtered normal and tumor sample 
-colnames(brca_miRNA_df)[1:10]
-
-normal_samples = colnames(brca_miRNA_df)[1:79]; length(normal_samples) # 79
-tumor_samples = colnames(brca_miRNA_df)[80:536]; length(tumor_samples) # 457
-
-normal_samples =  strsplit(normal_samples, split = "[.]")
-normal_samples = unlist(lapply(normal_samples, function(name){
-  paste(name[3],name[4],name[5],sep="-")
-}))
-
-tumor_samples =  strsplit(tumor_samples, split = "[.]")
-tumor_samples = unlist(lapply(tumor_samples, function(name){
-  paste(name[3],name[4],name[5],sep="-")
-}))
-
-length(intersect(normal_samples, tumor_samples)) # 76 out of 79 normal samples having matched tumor samples
-length(intersect(rownames(clinical_df), tumor_samples)) # 457 -->
-# thus all tumor samples are included in the clinical_df dataset
-
-## ------- subset clinical_df data ----------------------------------------------
-clinical_df = clinical_df[tumor_samples,c("vitalstatus","daystodeath","daystolastfollowup", "pathologyTstage")]
-clinical_df = as.data.frame(clinical_df)
-clinical_df$vitalstatus = as.factor(as.numeric(clinical_df$vitalstatus) - 1)
-clinical_df$daystodeath = as.numeric(as.character(clinical_df$daystodeath))
-clinical_df$daystolastfollowup = as.numeric(as.character(clinical_df$daystolastfollowup))
-clinical_df$pathologyTstage = as.integer(substr(clinical_df$pathologyTstage, start = 2, stop = 2))
-
-temp =  strsplit(rownames(clinical_df), split = "[-]")
-rownames(clinical_df) = unlist(lapply(temp, function(name){
-  paste("BRCA","Tumor",name[1],name[2],name[3],sep=".")
-}))
-
-nrow(clinical_df) # 457
-length(which(is.na(clinical_df$daystodeath)))
-length(which(is.na(clinical_df$daystolastfollowup)))
-# there is one sample does not have neither daystodeath or daystolastfollowup
-which(is.na(clinical_df$daystodeath) & is.na(clinical_df$daystolastfollowup))
-# TCGA-E9-A245 
-# 413 
-# remove those samples
-clinical_df = clinical_df[-which(is.na(clinical_df$daystodeath) & is.na(clinical_df$daystolastfollowup)),]
-nrow(clinical_df) # 456
-
-# divide patients into 2 groups based on pathological stage
-clinical_df$risk_level = ifelse(clinical_df$pathologyTstage < 3, "low-risk", "high-risk")
-
-## -------  create a new column which aggregate daystodeath and daystolastfollowup -------------------
-clinical_df$time = ifelse(is.na(clinical_df$daystodeath), 
-                          as.numeric(as.character(clinical_df$daystolastfollowup)), 
-                          as.numeric(as.character(clinical_df$daystodeath)))
-
-clinical_df$time = ifelse(is.na(clinical_df$daystodeath), 
-                          clinical_df$daystolastfollowup, 
-                          clinical_df$daystodeath)
-sum(is.na(clinical_df$time)) # 0 --> good!
-
-
-
-## ------- start Suvival anlysis --------------------------------------------------
-
-# create Survival object
-require(survival)
-# plot the Kaplan-Meier curve between two high-risk and low-risk group
-clinical_df$SurvObj <- with(clinical_df, Surv(time, vitalstatus == 1))
-save(clinical_df, file = "data_Saved_R_Objects/clinical_df.rda")
-
-fit <- survfit(clinical_df$SurvObj ~ clinical_df$risk_level)
-plot(fit, mark.time = T,  col = c("red","blue"),
-     xlab = "Days",ylab = "Survival Proability",
-     main = "Kaplan-Meier plot between low-risk vs high-risk group")
-legend(x = "topright", c("low-risk","high-risk"), lty=c(1,1), col = c("blue","red"))
-#text(x = 3.5,y = 100, labels = "p log_rank = 0.0375")
-# perform log-rank test
-survdiff(formula = clinical_df$SurvObj ~ clinical_df$risk_level)
-
-coxph(formula = SurvObj ~ risk_level,
-      data = clinical_df)
-
-### ... run network_sensitivity_based to get hub genes
-# summary(normal)
-# selected_lncRNAs = names(which(tumor_lncRNA_degree >= quantile(tumor_lncRNA_degree, c(0.80))))
-
-##########################################################################################
-### extract cancer subtype 
-##########################################################################################
-
-setwd("~/Desktop")
-clinical_new = read.table(file = "BRCA.datafreeze.20120227.txt",sep = "\t",header = F)
-clinical_new = clinical_new[-1,]
-dim(clinical_new) # 466  15
-
-
-# get sample names s
-sample_names = colnames(brca_miRNA_df)
-sample_names =  strsplit(sample_names, split = "[.]")
-sample_names = unlist(lapply(sample_names, function(name){
-  paste(name[3],name[4],name[5],sep="-")
-}))
-
-length(intersect(sample_names, clinical_new$V2))
+# ## ------- sample name manipulation ----------------------------------------------
+# clinical_df = brca_miRNA$clinical
+# 
+# ## select sample names also showed up in filtered normal and tumor sample 
+# colnames(brca_miRNA_df)[1:10]
+# 
+# normal_samples = colnames(brca_miRNA_df)[1:79]; length(normal_samples) # 79
+# tumor_samples = colnames(brca_miRNA_df)[80:536]; length(tumor_samples) # 457
+# 
+# normal_samples =  strsplit(normal_samples, split = "[.]")
+# normal_samples = unlist(lapply(normal_samples, function(name){
+#   paste(name[3],name[4],name[5],sep="-")
+# }))
+# 
+# tumor_samples =  strsplit(tumor_samples, split = "[.]")
+# tumor_samples = unlist(lapply(tumor_samples, function(name){
+#   paste(name[3],name[4],name[5],sep="-")
+# }))
+# 
+# length(intersect(normal_samples, tumor_samples)) # 76 out of 79 normal samples having matched tumor samples
+# length(intersect(rownames(clinical_df), tumor_samples)) # 457 -->
+# # thus all tumor samples are included in the clinical_df dataset
+# 
+# ## ------- subset clinical_df data ----------------------------------------------
+# clinical_df = clinical_df[tumor_samples,c("vitalstatus","daystodeath","daystolastfollowup", "pathologyTstage")]
+# clinical_df = as.data.frame(clinical_df)
+# clinical_df$vitalstatus = as.factor(as.numeric(clinical_df$vitalstatus) - 1)
+# clinical_df$daystodeath = as.numeric(as.character(clinical_df$daystodeath))
+# clinical_df$daystolastfollowup = as.numeric(as.character(clinical_df$daystolastfollowup))
+# clinical_df$pathologyTstage = as.integer(substr(clinical_df$pathologyTstage, start = 2, stop = 2))
+# 
+# temp =  strsplit(rownames(clinical_df), split = "[-]")
+# rownames(clinical_df) = unlist(lapply(temp, function(name){
+#   paste("BRCA","Tumor",name[1],name[2],name[3],sep=".")
+# }))
+# 
+# nrow(clinical_df) # 457
+# length(which(is.na(clinical_df$daystodeath)))
+# length(which(is.na(clinical_df$daystolastfollowup)))
+# # there is one sample does not have neither daystodeath or daystolastfollowup
+# which(is.na(clinical_df$daystodeath) & is.na(clinical_df$daystolastfollowup))
+# # TCGA-E9-A245 
+# # 413 
+# # remove those samples
+# clinical_df = clinical_df[-which(is.na(clinical_df$daystodeath) & is.na(clinical_df$daystolastfollowup)),]
+# nrow(clinical_df) # 456
+# 
+# # divide patients into 2 groups based on pathological stage
+# clinical_df$risk_level = ifelse(clinical_df$pathologyTstage < 3, "low-risk", "high-risk")
+# 
+# ## -------  create a new column which aggregate daystodeath and daystolastfollowup -------------------
+# clinical_df$time = ifelse(is.na(clinical_df$daystodeath), 
+#                           as.numeric(as.character(clinical_df$daystolastfollowup)), 
+#                           as.numeric(as.character(clinical_df$daystodeath)))
+# 
+# clinical_df$time = ifelse(is.na(clinical_df$daystodeath), 
+#                           clinical_df$daystolastfollowup, 
+#                           clinical_df$daystodeath)
+# sum(is.na(clinical_df$time)) # 0 --> good!
+# 
+# 
+# 
+# ## ------- start Suvival anlysis --------------------------------------------------
+# 
+# # create Survival object
+# require(survival)
+# # plot the Kaplan-Meier curve between two high-risk and low-risk group
+# clinical_df$SurvObj <- with(clinical_df, Surv(time, vitalstatus == 1))
+# save(clinical_df, file = "data_Saved_R_Objects/clinical_df.rda")
+# 
+# fit <- survfit(clinical_df$SurvObj ~ clinical_df$risk_level)
+# plot(fit, mark.time = T,  col = c("red","blue"),
+#      xlab = "Days",ylab = "Survival Proability",
+#      main = "Kaplan-Meier plot between low-risk vs high-risk group")
+# legend(x = "topright", c("low-risk","high-risk"), lty=c(1,1), col = c("blue","red"))
+# #text(x = 3.5,y = 100, labels = "p log_rank = 0.0375")
+# # perform log-rank test
+# survdiff(formula = clinical_df$SurvObj ~ clinical_df$risk_level)
+# 
+# coxph(formula = SurvObj ~ risk_level,
+#       data = clinical_df)
+# 
+# ### ... run network_sensitivity_based to get hub genes
+# # summary(normal)
+# # selected_lncRNAs = names(which(tumor_lncRNA_degree >= quantile(tumor_lncRNA_degree, c(0.80))))
+# 
+# ##########################################################################################
+# ### extract cancer subtype 
+# ##########################################################################################
+# 
+# setwd("~/Desktop")
+# clinical_new = read.table(file = "BRCA.datafreeze.20120227.txt",sep = "\t",header = F)
+# clinical_new = clinical_new[-1,]
+# dim(clinical_new) # 466  15
+# 
+# 
+# # get sample names s
+# sample_names = colnames(brca_miRNA_df)
+# sample_names =  strsplit(sample_names, split = "[.]")
+# sample_names = unlist(lapply(sample_names, function(name){
+#   paste(name[3],name[4],name[5],sep="-")
+# }))
+# 
+# length(intersect(sample_names, clinical_new$V2))
 
 ##########################################################################################
 ### univariate cox propotional hazard model based on those lncRNA and mRNA
@@ -174,7 +174,6 @@ tumor_mRNAs_clinical_expression_df = cbind(clinical_df, t(brca_mRNA_df[tumor_mRN
 tumor_mRNAs_cox = get_survival_stat(clinical_expression_df = tumor_mRNAs_clinical_expression_df,
                                      RNA = tumor_mRNAs)
 length(which(tumor_mRNAs_cox$pvalue_hazard_ratio < 0.05)) # 59
-
 
 load("data_Saved_R_Objects/clinical_df.rda")
 tumor_lncRNAs_clinical_expression_df = cbind(clinical_df, t(brca_lncRNA_df[tumor_lncRNAs,sample_names]))
@@ -220,17 +219,19 @@ mRNA_tumor_hazard_ratio <- data.frame(group = "mRNA - tumor",
 lncRNA_tumor_hazard_ratio <- data.frame(group = "lncRNA - tumor",
                                         value = tumor_lncRNAs_cox$hazard_ratio)
 
-plot.data = rbind(mRNA_normal_hazard_ratio, lncRNA_normal_hazard_ratio, 
-                  mRNA_tumor_hazard_ratio, lncRNA_tumor_hazard_ratio)
+# plot.data = rbind(mRNA_normal_hazard_ratio, lncRNA_normal_hazard_ratio, 
+#                   mRNA_tumor_hazard_ratio, lncRNA_tumor_hazard_ratio)
 
-ggplot(plot.data, aes(x=group, y=value, fill=group)) + geom_violin() + 
-  xlab("mRNA and lncRNA in 2 conditions") + ylab("Hazard ratio") +
-  labs(title = "Hazard ratio of mRNAs and lncRNA in normal and tumor groups") +
-  theme(legend.position = "none")
+plot.data = rbind(mRNA_tumor_hazard_ratio, lncRNA_tumor_hazard_ratio)
+
+# TO DO: add jitter point
+require(ggplot2)
 ggplot(plot.data, aes(x=group, y=value, fill=group)) +  geom_boxplot() + 
   xlab("Groups") + ylab("Hazard ratio") +
-  labs(title = "Hazard ratio of mRNAs and lncRNA in normal and tumor groups") +
-  theme(legend.position = "none")
+  labs(title = "Hazard ratio of mRNAs and lncRNA in tumor ceRNA network") +
+  theme(legend.position = "none") 
+
+
 
 ##########################################################################################
 ### test prognostic power of those hazard mRNA and lncRNA
@@ -240,16 +241,54 @@ ggplot(plot.data, aes(x=group, y=value, fill=group)) +  geom_boxplot() +
 # top_high_tumor_mRNA = names(sort(tumor_mRNAs_cox$hazard_ratio, decreasing = T)[1:5])
 # top_high_tumor_lncRNA = names(sort(tumor_lncRNAs_cox$hazard_ratio, decreasing = T)[1:5])
 
-top_high_normal_mRNA = names(which(normal_mRNAs_cox$hazard_ratio > 1.5))
-top_high_normal_lncRNA = names(which(normal_lncRNAs_cox$hazard_ratio > 1.5))
-top_high_tumor_mRNA = names(which(tumor_mRNAs_cox$hazard_ratio > 1.5))
-top_high_tumor_lncRNA = names(which(tumor_lncRNAs_cox$hazard_ratio > 1.5))
+top_high_normal_mRNA = names(which(normal_mRNAs_cox$hazard_ratio > 1))
+top_high_normal_lncRNA = names(which(normal_lncRNAs_cox$hazard_ratio > 1))
+
+top_high_tumor_mRNA = names(which(tumor_mRNAs_cox$hazard_ratio > 1))
+top_high_tumor_lncRNA = names(which(tumor_lncRNAs_cox$hazard_ratio > 1))
+
+# top_high_normal_mRNA = names(which(normal_mRNAs_cox$hazard_ratio > 1 & normal_mRNAs_cox$pvalue_hazard_ratio < 0.1))
+# top_high_normal_lncRNA = names(which(normal_lncRNAs_cox$hazard_ratio > 1 & normal_lncRNAs_cox$pvalue_hazard_ratio < 0.1))
+# top_high_tumor_mRNA = names(which(tumor_mRNAs_cox$hazard_ratio > 1 & tumor_mRNAs_cox$pvalue_hazard_ratio < 0.1))
+# top_high_tumor_lncRNA = names(which(tumor_lncRNAs_cox$hazard_ratio > 1 & tumor_lncRNAs_cox$pvalue_hazard_ratio < 0.1))
+
+### ---- check with network ------------------------------------------------------------
+
+# find mRNA and lncRNA in tumor network which both have high hazard ratio
+load("data_Saved_R_Objects/miRNA_target/predicted_normal_tumor_goodCorr.rda")
+d1 = tumor_encRNA_sensitivity_bound_goodCoor[which(tumor_encRNA_sensitivity_bound_goodCoor$mRNA %in% top_high_tumor_mRNA),]
+d2 = d1[which(d1$lncRNA %in% top_high_tumor_lncRNA),]
+
+d2$encRNA_triple
+length(unique(d2$lncRNA)) # 69
+length(unique(d2$mRNA)) # 163
+length(unique(d2$miRNA)) # 9 
+length(which(d2$miRNA == "hsa-mir-22"))
+
+# download reference 
+reference1 = gdata::read.xls("/home/ducdo/Desktop/allonco_20130923.xlsx")
+reference2 = read.table("/home/ducdo/Desktop/cancergenes_list.txt", header = T,
+                        sep = "\t", stringsAsFactors = F)
+reference2$X518_Known_Cancer_Genes = gsub(x = reference2$X518_Known_Cancer_Genes, pattern = " ", replacement = "")
+tumor_genes = union(reference1$symbol,reference2$X518_Known_Cancer_Genes[1:518])
+
+cross_checked_bad_genes = d2$mRNA[which(d2$mRNA %in% tumor_genes)]
+View(reference[which(reference$symbol %in% cross_checked_bad_genes),])
+
+brca_onco1 = read.table("/home/ducdo/Desktop/brca_reference_oncogenes.txt", header = T,
+                       sep = "\t")
+cross_checked_bad_genes2 = d2$mRNA[which(d2$mRNA %in% brca_onco1$Gene)]
+
+
+# cross-check with 
 
 
 
+#### ---------------------------------------------------------------------------------------
 load("data_Saved_R_Objects/clinical_df.rda")
+load("data_Saved_R_Objects/brca_df.rda")
+top_high_tumor_lncRNA = names(which(tumor_lncRNAs_cox$hazard_ratio > 1))
 sample_names = rownames(clinical_df)
-mRNAs_clinical_expression_df = cbind(clinical_df, t(brca_mRNA_df[top_high_normal_mRNA,sample_names]))
 lncRNAs_clinical_expression_df = cbind(clinical_df, t(brca_lncRNA_df[top_high_tumor_lncRNA,sample_names]))
 
 p_values = c()
@@ -279,19 +318,18 @@ a1$risk_level[which(a1[,'ENSG00000226637.1'] > median(a1[,'ENSG00000226637.1']))
 a1$risk_level[which(a1[,'ENSG00000226637.1'] <= median(a1[,'ENSG00000226637.1']))] = "group 2"
 fit <- survfit(a1$SurvObj ~ a1$risk_level)
 plot(fit, mark.time = T,  col = c("red","blue"),
-     xlab = "Days",ylab = "Survival Proability",
+     xlab = "Days",ylab = "Survival Probability",
      main = "ENSG00000226637.1 (p log_rank = 0.0014)")
-legend(x = "topright", c("lower-risk","higher-risk"), lty=c(1,1), col = c("blue","red"))
+legend(x = "topright", c("lower expression","higher expression"), lty=c(1,1), col = c("blue","red"))
 
 a2 = lncRNAs_clinical_expression_df
-
 lncRNAs_clinical_expression_df$risk[which(lncRNAs_clinical_expression_df[,'ENSG00000258929.2'] > median(lncRNAs_clinical_expression_df[,'ENSG00000258929.2']))] = "group 1"
 lncRNAs_clinical_expression_df$risk[which(lncRNAs_clinical_expression_df[,'ENSG00000258929.2'] <= median(lncRNAs_clinical_expression_df[,'ENSG00000258929.2']))] = "group 2"
-fit2 <- survfit(mRNAs_clinical_expression_df$SurvObj ~ mRNAs_clinical_expression_df$risk)
+fit2 <- survfit(a2$SurvObj ~ a2$risk_level)
 plot(fit2, mark.time = T,  col = c("red","blue"),
      xlab = "Days",ylab = "Survival Proability",
      main = "ENSG00000258929.2 (p log_rank = 0.0058)")
-legend(x = "topright", c("lower-risk","higher-risk"), lty=c(1,1), col = c("blue","red"))
+legend(x = "topright", c("lower expression","higher expression"), lty=c(1,1), col = c("blue","red"))
 
 d1 = tumor_encRNA_sensitivity_bound_goodCoor[which(tumor_encRNA_sensitivity_bound_goodCoor$lncRNA %in% top_high_tumor_lncRNA),]
 
