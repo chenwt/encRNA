@@ -1,5 +1,6 @@
 setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
-source("get_normal_tumor_expression_matrices.R")
+source("code_data_prep/get_normal_tumor_expression_matrices.R")
+source("code_correlation_analysis/helper_functions.R")
 # load("data_Saved_R_Objects/brca_df.rda")
 
 # setwd("/home/MARQNET/0099dod/encRNA")
@@ -50,30 +51,42 @@ normal_out = mRNA_lncRNA_normal_scca$out
 mRNA_lncRNA_tumor_scca = get_scca_result(x = t(mRNA_tumor), z = t(lncRNA_tumor), nperms = 100)
 mRNA_lncRNA_tumor_perm_out = mRNA_lncRNA_tumor_scca$perm
 tumor_out = mRNA_lncRNA_tumor_scca$out
+save(mRNA_lncRNA_normal_scca, mRNA_lncRNA_tumor_scca, 
+     file = "data_Saved_R_Objects/cca/mRNA_lncRNA_all_scca.rda")
 
 ### from matched normal_tumor
 load("data_Saved_R_Objects/brca_expression_matched.rda")
+load("data_Saved_R_Objects/cca/mRNA_lncRNA_normal_matched_scca.rda")
 source("get_normal_tumor_expression_matrices.R")
 mRNA_lncRNA_normal_matched_scca = get_scca_result(x = t(mRNA_normal_matched), 
                                                   z = t(lncRNA_normal_matched), 
                                                   nperms = 100)
-save(mRNA_lncRNA_normal_matched_scca, 
-     file = "data_Saved_R_Objects/cca/mRNA_lncRNA_normal_matched_scca.rda")
+mRNA_lncRNA_tumor_matched_scca = get_scca_result(x = t(mRNA_tumor_matched), 
+                                                 z = t(lncRNA_tumor_matched), 
+                                                 nperms = 100)
+save(mRNA_lncRNA_normal_matched_scca, mRNA_lncRNA_tumor_matched_scca,
+     file = "data_Saved_R_Objects/cca/mRNA_lncRNA_matched_scca.rda")
 
 ######## -------------- Analyze Sparse CCA -----------------------------------------------------------
 setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 source("get_normal_tumor_expression_matrices.R")
-load("data_Saved_R_Objects/cca/mRNA_lncRNA_normal_cca.rda")
-load("data_Saved_R_Objects/cca/mRNA_lncRNA_tumor_cca.rda")
+load("data_Saved_R_Objects/cca/mRNA_lncRNA_all_scca.rda")
+load("data_Saved_R_Objects/cca/mRNA_lncRNA_matched_scca.rda")
 
-#### how many mRNAs and lncRNAs are kept 
+#### how many mRNAs and lncRNAs are kept (all normal and tumor samples)
 # normal
-length(which(normal_out$u != 0)) # mRNAs: 9,251 out of 17,613
-length(which(normal_out$v != 0)) # lncRNAs: 2720 out of 4,828  
+length(which(mRNA_lncRNA_normal_scca$out$u != 0)) # mRNAs: 9,251 out of 17,613
+length(which(mRNA_lncRNA_normal_scca$out$v != 0)) # lncRNAs: 2720 out of 4,828  
 # tumor
-length(which(tumor_out$u != 0)) # mRNAs: 723 out of 17,613
-length(which(tumor_out$v != 0)) # lncRNAs: 195 out of 4,828  
+length(which(mRNA_lncRNA_tumor_scca$out$u != 0)) # mRNAs: 723 out of 17,613
+length(which(mRNA_lncRNA_tumor_scca$out$v != 0)) # lncRNAs: 195 out of 4,828  
 
+#### how many mRNAs and lncRNAs are kept (matched normal and tumor samples)
+length(which(mRNA_lncRNA_normal_matched_scca$out$u != 0)) # mRNAs: 7526 out of 17,613
+length(which(mRNA_lncRNA_normal_matched_scca$out$v != 0)) # lncRNAs: 2243 out of 4,828  
+# tumor
+length(which(mRNA_lncRNA_tumor_matched_scca$out$u != 0)) # mRNAs: 2846 out of 17,613
+length(which(mRNA_lncRNA_tumor_matched_scca$out$v != 0)) # lncRNAs: 686 out of 4,828  
 
 ######## -------------- Sparse CCA function -----------------------------------------------------------
 

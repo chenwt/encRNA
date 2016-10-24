@@ -189,4 +189,24 @@ process_starBase = function(){
   return(processed)
 }
 
+get_scca_result = function(x, z, nperms = 100){
+  require(PMA)
+  perm_out <- CCA.permute(x = x,
+                          z = z,
+                          typex = "standard",
+                          typez = "standard",
+                          nperms = nperms)
+  out <- CCA(x = x,
+             z = z, 
+             typex = "standard", 
+             typez = "standard",
+             penaltyx = perm_out$bestpenaltyx,
+             penaltyz = perm_out$bestpenaltyz,
+             v = perm_out$v.init,
+             K = 1)
+  l = list(perm = perm_out, out = out)
+  return(l)
+}
+
+
 

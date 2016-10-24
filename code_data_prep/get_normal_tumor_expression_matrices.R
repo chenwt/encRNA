@@ -21,3 +21,4 @@ lncRNA_normal_matched = brca_lncRNA_matched[,1:76];
 mRNA_tumor_matched = brca_mRNA_matched[,77:152];
 miRNA_tumor_matched = brca_miRNA_matched[,77:152];
 lncRNA_tumor_matched = brca_lncRNA_matched[,77:152]
+

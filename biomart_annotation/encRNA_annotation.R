@@ -32,14 +32,19 @@ setdiff(brca_mRNA_names, brca_mRNA_name_annotation$hgnc_symbol)
 setdiff(brca_mRNA_name_annotation$hgnc_symbol, brca_mRNA_names)
 
 ##### --------------- miRNA -----------------------------------------------------------------
-
 library(biomaRt)
 library(GenomicRanges)
+
 ensembl = useMart("ensembl",dataset="hsapiens_gene_ensembl")
 miRNA = getBM(attributes=c("mirbase_id","ensembl_gene_id","chromosome_name","start_position", "end_position","gene_biotype","external_gene_name"),
               values = brca_miRNA_names,
               mart=ensembl) 
 length(miRNA$mirbase_id)
-miRNA = miRNA[which(miRNA$mirbase_id != ""),]
-length(intersect(miRNA$mirbase_id,brca_miRNA_names)) # 320
-setdiff(brca_miRNA_names,miRNA$mirbase_id)
+brca_miRNA_name_annotation = miRNA[which(miRNA$mirbase_id != ""),]
+length(intersect(brca_miRNA_name_annotation$mirbase_id,brca_miRNA_names)) # 320
+setdiff(brca_miRNA_names,brca_miRNA_name_annotation$mirbase_id)
+
+save(brca_lncRNA_names, brca_mRNA_names, brca_miRNA_names, 
+     brca_lncRNA_name_annotation, brca_mRNA_name_annotation, brca_miRNA_name_annotation,
+     file = "data_Saved_R_Objects/annotation/mRNA_lncRNA_miRNA_annotation.rda")
+

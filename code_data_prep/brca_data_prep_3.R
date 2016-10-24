@@ -1,7 +1,7 @@
-setwd("/media/ducdo/UUI/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
+setwd("/media/ducdo/UUI1/Bioinformatics/Summer Research/Cancer_Survival/encRNA_methylation_260616")
 # load("brca_common_objects2.rda")
-load("Saved_R_Objects/brca_common_objects3.rda")
-load("Saved_R_Objects/brca_df3.rda")
+load("data_Saved_R_ObjectsSaved_R_Objects/brca_common_objects3.rda")
+load("data_Saved_R_Objects/brca_df.rda")
 
 colnames(brca_mRNA_common)[1:10]
 colnames(brca_miRNA_common)[1:10]
